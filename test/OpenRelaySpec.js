@@ -73,6 +73,7 @@ describe('OpenRelay', () => {
         expect(order.takerTokenAmount).to.bignumber.equal(new BigNumber("58500000000000000"));
         expect(order.makerFee).to.bignumber.equal(new BigNumber("100000000000000000"));
         expect(order.takerFee).to.bignumber.equal(new BigNumber("0"));
+        expect(order.salt.mod("4294967296")).to.bignumber.equal(new BigNumber("132727578"));
         done();
       })
     });
@@ -98,6 +99,7 @@ describe('OpenRelay', () => {
         expect(order.takerTokenAmount).to.bignumber.equal(new BigNumber("58500000000000000"));
         expect(order.makerFee).to.bignumber.equal(new BigNumber("50000000000000000"));
         expect(order.takerFee).to.bignumber.equal(new BigNumber("50000000000000000"));
+        expect(order.salt.mod("4294967296")).to.bignumber.equal(new BigNumber("132727578"));
         done();
       })
     });
