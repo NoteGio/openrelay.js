@@ -4,6 +4,7 @@ import {FeeLookup} from './FeeLookup.js';
 import BigNumber from 'bignumber.js';
 import rp from 'request-promise-native';
 
+
 class OpenRelay {
 
   /**
@@ -64,7 +65,7 @@ class OpenRelay {
       takerTokenAmount: new BigNumber(takerTokenAmount),
       expirationUnixTimestampSec: (
         options.expirationUnixTimestampSec ||
-        (parseInt(new Date().getTime() / 1000) + (options.duration || 24 * 60 * 60 * 1))
+        (parseInt(new Date().getTime() / 1000) + parseInt(options.duration || 24 * 60 * 60 * 1))
       ).toString(),
       salt: this.generateWatermarkedSalt(),
       feeRecipient: options.feeRecipient || this.defaultFeeRecipient,
@@ -88,6 +89,23 @@ class OpenRelay {
         order.takerFee = new BigNumber(feeResponse.takerFee);
       }
       return order;
+    });
+  }
+
+  signOrder(order) {
+    return Promise.resolve(order).then((order) => {
+      return this.getOrderHashHex(order).then((orderHash) => {
+        return this.zeroEx.signOrderHashAsync(orderHash, order.maker).then((signature) => {
+          order.ecSignature = signature;
+          return order;
+        });
+      })
+    });
+  }
+
+  getOrderHashHex(order) {
+    return Promise.resolve(order).then((order) => {
+      return ZeroEx.getOrderHashHex(order);
     });
   }
 
