@@ -1,5 +1,6 @@
 import chai from 'chai';
 import OpenRelay from '../src/OpenRelay';
+import {MineablePromise} from '../src/MineablePromise';
 import Web3 from "web3";
 import TestRPC from 'ethereumjs-testrpc';
 import BigNumber from 'bignumber.js';
@@ -96,7 +97,7 @@ describe('OpenRelay', () => {
           expirationUnixTimestampSec: "0"
         }
       ).then((order) => {
-        expect(order.expirationUnixTimestampSec).to.equal("0");
+        expect(order.expirationUnixTimestampSec).to.bignumber.equal(new BigNumber("0"));
         done();
       })
     });
@@ -215,7 +216,6 @@ describe('OpenRelay', () => {
         "100000000000000000",
         "0xc66ea802717bfb9833400264dd12c2bceaa34a6d",
         "58500000000000000",
-        {expirationUnixTimestampSec: "0"}
       )).then((signedOrder) => {
         openrelay.getOrderHashHex(signedOrder).then((hash) => {
           expect(ZeroEx.isValidSignature(hash, signedOrder.ecSignature, signedOrder.maker)).to.be.true;
@@ -242,7 +242,6 @@ describe('OpenRelay', () => {
           "100000000000000000",
           zrxAddress,
           "58500000000000000",
-          {expirationUnixTimestampSec: "0"}
         )
       }).then((order) => {
         var mineable = openrelay.setMakerAllowances(order);
@@ -281,7 +280,6 @@ describe('OpenRelay', () => {
           "100000000000000000",
           wethAddress,
           "58500000000000000",
-          {expirationUnixTimestampSec: "0"}
         )
       }).then((order) => {
         var mineable = openrelay.setMakerAllowances(order);
@@ -320,7 +318,6 @@ describe('OpenRelay', () => {
           "100000000000000000",
           zrxAddress,
           "58500000000000000",
-          {expirationUnixTimestampSec: "0"}
         )
       }).then((order) => {
         var mineable = openrelay.setMakerAllowances(order, {unlimited: true});
@@ -366,7 +363,6 @@ describe('OpenRelay', () => {
           wethAddress,
           "58500000000000000",
           {
-            expirationUnixTimestampSec: "0",
             makerFeePortion: "0",
           }
         )
@@ -410,7 +406,6 @@ describe('OpenRelay', () => {
           "100000000000000000",
           zrxAddress,
           "58500000000000000",
-          {expirationUnixTimestampSec: "0"}
         );
       }).then((order) => {
         var mineable = openrelay.setTakerAllowances(order);
@@ -452,7 +447,6 @@ describe('OpenRelay', () => {
           "100000000000000000",
           wethAddress,
           "58500000000000000",
-          {expirationUnixTimestampSec: "0"}
         )
       }).then((order) => {
         var mineable = openrelay.setTakerAllowances(order, {unlimited: true});
@@ -496,7 +490,6 @@ describe('OpenRelay', () => {
           wethAddress,
           "58500000000000000",
           {
-            expirationUnixTimestampSec: "0",
             makerFeePortion: "0",
           }
         )
@@ -517,6 +510,216 @@ describe('OpenRelay', () => {
           expect(takerTokenAllowance).to.bignumber.equal(order.takerTokenAmount.div(2));
           expect(zrxAllowance).to.bignumber.equal(order.takerFee.div(2));
           done();
+        });
+      });
+    });
+  });
+  describe('openrelay.validateOrderFillable()', () => {
+    it("should find the order fillable", (done) => {
+      const openrelay = new OpenRelay(web3, {
+        _feeLookup: new MockFeeLookup(),
+      });
+      Promise.all([
+        openrelay.zeroEx.etherToken.getContractAddressAsync(),
+        openrelay.zeroEx.exchange.getZRXTokenAddressAsync(),
+      ]).then((resolvedPromises) => {
+        var wethAddress = resolvedPromises[0];
+        var zrxAddress = resolvedPromises[1];
+        var order = openrelay.createOrder(
+          zrxAddress,
+          "100000000000000000",
+          wethAddress,
+          "58500000000000000",
+        )
+        openrelay.setMakerAllowances(order).mine().then(() => {
+          openrelay.validateOrderFillable(openrelay.signOrder(
+            order
+          )).then(done).catch(expect.fail);
+        })
+      });
+    });
+    it("should fail due to insufficient maker funds / allowances", (done) => {
+      const openrelay = new OpenRelay(web3, {
+        _feeLookup: new MockFeeLookup(),
+      });
+      Promise.all([
+        openrelay.zeroEx.etherToken.getContractAddressAsync(),
+        openrelay.zeroEx.exchange.getZRXTokenAddressAsync(),
+      ]).then((resolvedPromises) => {
+        var wethAddress = resolvedPromises[0];
+        var zrxAddress = resolvedPromises[1];
+        openrelay.validateOrderFillable(openrelay.signOrder(
+          openrelay.createOrder(
+            wethAddress,
+            "100000000000000000",
+            zrxAddress,
+            "58500000000000000",
+          )
+        )).then(expect.fail).catch(() => {
+          done();
+        });
+      });
+    });
+  });
+  describe('openrelay.validateOrderFillable()', () => {
+    it("should find the order fillable", (done) => {
+      const makerRelay = new OpenRelay(web3, {
+        _feeLookup: new MockFeeLookup(),
+      });
+      var takerAccount = new Promise((resolve, reject) => {
+        web3.eth.getAccounts((err, accounts) => {
+          resolve(accounts[1]);
+        });
+      });
+      const takerRelay = new OpenRelay(web3, {
+        defaultAccount: takerAccount,
+        _feeLookup: new MockFeeLookup(),
+      });
+
+      Promise.all([
+        makerRelay.zeroEx.etherToken.getContractAddressAsync(),
+        makerRelay.zeroEx.exchange.getZRXTokenAddressAsync(),
+      ]).then((resolvedPromises) => {
+        var wethAddress = resolvedPromises[0];
+        var zrxAddress = resolvedPromises[1];
+        var signedOrder = makerRelay.signOrder(makerRelay.createOrder(
+            zrxAddress,
+            "100000000000000000",
+            wethAddress,
+            "58500000000000000",
+        ));
+        var makerAllowances = makerRelay.setMakerAllowances(signedOrder);
+        var takerAllowances = takerRelay.setTakerAllowances(signedOrder);
+        var makerAddress;
+        var takerAddress;
+        var sendEth = new MineablePromise(makerRelay, Promise.all([
+            makerRelay.defaultAccount,
+            takerRelay.defaultAccount,
+          ]).then((resolvedPromises) => {
+            makerAddress = resolvedPromises[0];
+            takerAddress = resolvedPromises[1];
+            return new Promise((resolve, reject) => {
+              web3.eth.sendTransaction({from: makerAddress, to: takerAddress, value: "58500000000000000"}, (err, data) => {
+                if(err) { reject(err) }
+                else { resolve([data]) }
+              });
+            });
+          }));
+        var depositEth = new MineablePromise(takerRelay, sendEth.mine().then(() => {
+            return Promise.all([takerRelay.zeroEx.etherToken.depositAsync(new BigNumber("58500000000000000"), takerAddress)])
+        }));
+        Promise.all([
+          makerAllowances.mine(),
+          takerAllowances.mine(),
+          depositEth.mine(),
+        ]).then(() => {
+          takerRelay.validateOrderFillable(signedOrder).then(done);
+        });
+      });
+    });
+    it("should find the order unfillable due to maker allowances", (done) => {
+      const makerRelay = new OpenRelay(web3, {
+        _feeLookup: new MockFeeLookup(),
+      });
+      var takerAccount = new Promise((resolve, reject) => {
+        web3.eth.getAccounts((err, accounts) => {
+          resolve(accounts[1]);
+        });
+      });
+      const takerRelay = new OpenRelay(web3, {
+        defaultAccount: takerAccount,
+        _feeLookup: new MockFeeLookup(),
+      });
+
+      Promise.all([
+        makerRelay.zeroEx.etherToken.getContractAddressAsync(),
+        makerRelay.zeroEx.exchange.getZRXTokenAddressAsync(),
+      ]).then((resolvedPromises) => {
+        var wethAddress = resolvedPromises[0];
+        var zrxAddress = resolvedPromises[1];
+        var signedOrder = makerRelay.signOrder(makerRelay.createOrder(
+            zrxAddress,
+            "100000000000000000",
+            wethAddress,
+            "58500000000000000",
+        ));
+        var takerAllowances = takerRelay.setTakerAllowances(signedOrder);
+        var makerAddress;
+        var takerAddress;
+        var sendEth = new MineablePromise(makerRelay, Promise.all([
+            makerRelay.defaultAccount,
+            takerRelay.defaultAccount,
+          ]).then((resolvedPromises) => {
+            makerAddress = resolvedPromises[0];
+            takerAddress = resolvedPromises[1];
+            return new Promise((resolve, reject) => {
+              web3.eth.sendTransaction({from: makerAddress, to: takerAddress, value: "58500000000000000"}, (err, data) => {
+                if(err) { reject(err) }
+                else { resolve([data]) }
+              });
+            });
+          }));
+        var depositEth = new MineablePromise(takerRelay, sendEth.mine().then(() => {
+            return Promise.all([takerRelay.zeroEx.etherToken.depositAsync(new BigNumber("58500000000000000"), takerAddress)])
+        }));
+        Promise.all([
+          takerAllowances.mine(),
+          depositEth.mine(),
+        ]).then(() => {
+          takerRelay.validateOrderFillable(signedOrder).then(expect.fail).catch(() => {done()});
+        });
+      });
+    });
+    it("should find the order unfillable due to taker allowances", (done) => {
+      const makerRelay = new OpenRelay(web3, {
+        _feeLookup: new MockFeeLookup(),
+      });
+      var takerAccount = new Promise((resolve, reject) => {
+        web3.eth.getAccounts((err, accounts) => {
+          resolve(accounts[1]);
+        });
+      });
+      const takerRelay = new OpenRelay(web3, {
+        defaultAccount: takerAccount,
+        _feeLookup: new MockFeeLookup(),
+      });
+
+      Promise.all([
+        makerRelay.zeroEx.etherToken.getContractAddressAsync(),
+        makerRelay.zeroEx.exchange.getZRXTokenAddressAsync(),
+      ]).then((resolvedPromises) => {
+        var wethAddress = resolvedPromises[0];
+        var zrxAddress = resolvedPromises[1];
+        var signedOrder = makerRelay.signOrder(makerRelay.createOrder(
+            zrxAddress,
+            "100000000000000000",
+            wethAddress,
+            "58500000000000000",
+        ));
+        var makerAllowances = makerRelay.setMakerAllowances(signedOrder);
+        var makerAddress;
+        var takerAddress;
+        var sendEth = new MineablePromise(makerRelay, Promise.all([
+            makerRelay.defaultAccount,
+            takerRelay.defaultAccount,
+          ]).then((resolvedPromises) => {
+            makerAddress = resolvedPromises[0];
+            takerAddress = resolvedPromises[1];
+            return new Promise((resolve, reject) => {
+              web3.eth.sendTransaction({from: makerAddress, to: takerAddress, value: "58500000000000000"}, (err, data) => {
+                if(err) { reject(err) }
+                else { resolve([data]) }
+              });
+            });
+          }));
+        var depositEth = new MineablePromise(takerRelay, sendEth.mine().then(() => {
+            return Promise.all([takerRelay.zeroEx.etherToken.depositAsync(new BigNumber("58500000000000000"), takerAddress)])
+        }));
+        Promise.all([
+          makerAllowances.mine(),
+          depositEth.mine(),
+        ]).then(() => {
+          takerRelay.validateOrderFillable(signedOrder).then(expect.fail).catch(() => {done()});
         });
       });
     });

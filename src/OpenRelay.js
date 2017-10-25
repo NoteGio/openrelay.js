@@ -65,10 +65,10 @@ class OpenRelay {
       makerTokenAmount: new BigNumber(makerTokenAmount),
       takerTokenAddress: takerTokenAddress,
       takerTokenAmount: new BigNumber(takerTokenAmount),
-      expirationUnixTimestampSec: (
+      expirationUnixTimestampSec: new BigNumber(
         options.expirationUnixTimestampSec ||
         (parseInt(new Date().getTime() / 1000) + parseInt(options.duration || 24 * 60 * 60 * 1))
-      ).toString(),
+      ),
       salt: this.generateWatermarkedSalt(),
       feeRecipient: options.feeRecipient || this.defaultFeeRecipient,
     };
@@ -121,19 +121,46 @@ class OpenRelay {
     });
   }
 
-  // /**
-  //  * validateOrder
-  //  * @param {order} [order|Promise<order>] - The order to be validated
-  //  * @param {string|BigNumber} [takerTokenAmount=order.takerTokenAmount] - The amount of the taker token to verify; other amounts will be verified proportionally.
-  //  * @returns {void}
-  //  */
-  //  validateOrderFillable(order, takerTokenAmount) {
-  //    return Promise.resolve(order).then((order) => {
-  //      if(!takerTokenAmount) {
-  //
-  //      }
-  //    });
-  //  }
+  /**
+   * validateOrderFillable
+   *
+   * Ensures that an order can be filled. Should be run before submitting an
+   * order to the relay.
+   *
+   * @param {order} [order|Promise<order>] - The order to be validated. Must be signed.
+   * @returns {void}
+   * @throws Will throw if order cannot be filled
+   */
+   validateOrderFillable(order) {
+     return Promise.resolve(order).then((order) => {
+       return this.zeroEx.exchange.validateOrderFillableOrThrowAsync(order);
+     });
+   }
+
+  /**
+   * validateFillOrder
+   *
+   * Ensures that an order can be filled. Should be run before trying to fill
+   * an order.
+   *
+   * @param {order} [order|Promise<order>] - The order to be validated. Must be signed.
+   * @param {object} [options]
+   * @param {string|BigNumber} [options.takerTokenAmount=order.takerTokenAmount] - The amount of the taker token to verify; other amounts will be verified proportionally.
+  *  @param {string} [options.takerAddress=openrelay.defaultAccount] - The taker to fill the order
+   * @returns {void}
+   * @throws Will throw if order cannot be filled
+   */
+   validateFillOrder(order, options={}) {
+     return Promise.all([
+       Promise.resolve(order),
+       this.defaultAccount,
+     ]).then((resolvedPromises) => {
+       var order = resolvedPromises[0];
+       var takerAddress = options.takerAddress || resolvedPromises[1];
+       var takerTokenAmount = options.takerTokenAmount || order.takerTokenAmount;
+       return this.zeroEx.exchange.validateFillOrderThrowIfInvalidAsync(order, takerTokenAmount, takerAddress);
+     });
+   }
 
   /**
    * generateWatermarkedSalt
