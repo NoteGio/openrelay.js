@@ -166,42 +166,50 @@ class OpenRelay {
    * @return {void}
    */
    setMakerAllowances(order, options={}) {
-     return new MineablePromise(this, Promise.all([
-       Promise.resolve(order),
-       this.zeroEx.exchange.getZRXTokenAddressAsync(),
-     ]).then((resolvedPromises) => {
-       order = resolvedPromises[0];
-       var zrxAddress = resolvedPromises[1];
-       var proxyAddress = resolvedPromises[2];
+     return this._setAllowances(
+       order.makerTokenAddress,
+       order.makerTokenAmount,
+       order.makerFee,
+       order.maker,
+       options.unlimited === true,
+       new BigNumber("1"),
+     );
+   }
+   _setAllowances(tokenAddress, tokenAmount, feeAmount, account, unlimited, direction) {
+     return new MineablePromise(this, this.zeroEx.exchange.getZRXTokenAddressAsync()
+     .then((zrxAddress) => {
        return Promise.all([
-         this.zeroEx.token.getProxyAllowanceAsync(order.makerTokenAddress, order.maker),
-         this.zeroEx.token.getProxyAllowanceAsync(zrxAddress, order.maker)
+         this.zeroEx.token.getProxyAllowanceAsync(tokenAddress, account),
+         this.zeroEx.token.getProxyAllowanceAsync(zrxAddress, account)
        ]).then((resolvedPromises) => {
-         var makerTokenAllowance = resolvedPromises[0];
-         var makerFeeAllowance = resolvedPromises[1];
+         var tokenAllowance = resolvedPromises[0];
+         var feeAllowance = resolvedPromises[1];
          var setAllowancePromises = [];
-         if(options.unlimited === true) {
-           if(makerTokenAllowance.lt(MAX_UINT_256.div(2))) {
+         if(unlimited === true) {
+           if(tokenAllowance.lt(MAX_UINT_256.div(2))) {
              setAllowancePromises.push(
-               this.zeroEx.token.setUnlimitedProxyAllowanceAsync(order.makerTokenAddress, order.maker)
+               this.zeroEx.token.setUnlimitedProxyAllowanceAsync(tokenAddress, account)
              );
            }
-           if(order.makerTokenAddress != zrxAddress && makerFeeAllowance.lt(MAX_UINT_256.div(2))) {
+           if(tokenAddress != zrxAddress && feeAllowance.lt(MAX_UINT_256.div(2))) {
              setAllowancePromises.push(
-               this.zeroEx.token.setUnlimitedProxyAllowanceAsync(zrxAddress, order.maker)
+               this.zeroEx.token.setUnlimitedProxyAllowanceAsync(zrxAddress, account)
              );
            }
          } else {
-           if(order.makerTokenAddress == zrxAddress) {
+           if(tokenAddress == zrxAddress) {
+             // If the token we're setting an allowance for *is* ZRX then
+             //   direction is +1 for the maker, because the taker needs to be able to fill the order plus fees
+             //   direction is -1 for the taker, because the taker will be able to use the completed order to pay fees
              setAllowancePromises.push(
-               this.zeroEx.token.setProxyAllowanceAsync(order.makerTokenAddress, order.maker, makerTokenAllowance.plus(order.makerTokenAmount).plus(order.makerFee))
+               this.zeroEx.token.setProxyAllowanceAsync(tokenAddress, account, tokenAllowance.plus(tokenAmount).plus(feeAmount.times(direction)))
              );
            } else {
              setAllowancePromises.push(
-               this.zeroEx.token.setProxyAllowanceAsync(order.makerTokenAddress, order.maker, makerTokenAllowance.plus(order.makerTokenAmount))
+               this.zeroEx.token.setProxyAllowanceAsync(tokenAddress, account, tokenAllowance.plus(tokenAmount))
              );
              setAllowancePromises.push(
-               this.zeroEx.token.setProxyAllowanceAsync(zrxAddress, order.maker, makerFeeAllowance.plus(order.makerFee))
+               this.zeroEx.token.setProxyAllowanceAsync(zrxAddress, account, feeAllowance.plus(feeAmount))
              );
            }
          }
