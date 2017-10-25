@@ -195,7 +195,6 @@ class OpenRelay {
      ]).then((resolvedPromises) => {
        var order = resolvedPromises[0];
        var defaultAccount = resolvedPromises[1];
-       console.log(JSON.stringify(order));
        var fillAmount = options.takerFillAmount || order.takerTokenAmount;
        return this._setAllowances(
          order.takerTokenAddress,
