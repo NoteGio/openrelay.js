@@ -4,6 +4,7 @@ import {FeeLookup} from './FeeLookup.js';
 import BigNumber from 'bignumber.js';
 import rp from 'request-promise-native';
 
+const MAX_UINT_256 = new BigNumber(2).pow(256).minus(1);
 
 class OpenRelay {
 
@@ -42,7 +43,7 @@ class OpenRelay {
   }
 
   /**
-   * createOrder
+   * createOrder generates an unsigned order. Queries the API to determine fees, and uses ZeroEx to determine the exchange address.
    * @param {string} makerTokenAddress - The address of the contract for the token provided by the maker (received by the taker)
    * @param {string|BigNumber} makerTokenAmount - The quantity of the maker token provided by the maker. This should be in base units, so if a token has 18 decimal places, 1 unit would be "1000000000000000000"
    * @param {string} takerTokenAddress - The address of the contract for the token requested by the maker (provided by the taker)
@@ -52,6 +53,7 @@ class OpenRelay {
    * @param {number} [options.duration=86400] - The number of seconds from now that the order will expire. Defaults to one day. Do not provide both this AND expirationUnixTimestampSec.
    * @param {string} [options.feeRecipient=openrelay.defaultFeeRecipient] - The address of the feeRecipient.
    * @param {number} [options.makerFeePortion=null] - The share of the total fee to be paid for the maker. Any remaining required fees will be assigned to the taker. OpenRelay.xyz allows the maker to determine the apportionment of fees, but other relayers may require following the response exactly.
+   * @returns {Promise<order>} - A promise for an unsigned order.
    */
   createOrder(makerTokenAddress, makerTokenAmount, takerTokenAddress, takerTokenAmount, options={}) {
     if (options.expirationUnixTimestampSec && options.duration) {
@@ -92,6 +94,11 @@ class OpenRelay {
     });
   }
 
+  /**
+   * signOrder
+   * @param {order|Promise<order>} [order] - An order or promise for an order to be signed. The maker of the order must be an account managed by opnerelay.web3.
+   * @returns {Promise<signedOrder>} - A signed order.
+   */
   signOrder(order) {
     return Promise.resolve(order).then((order) => {
       return this.getOrderHashHex(order).then((orderHash) => {
@@ -103,11 +110,30 @@ class OpenRelay {
     });
   }
 
+  /**
+   * getOrderHashHex
+   * @param {order|signedOrder|Promise<order>|Promise<signedOrders>} [order] - The order to be hashed
+   * @returns {Promise<string>}
+   */
   getOrderHashHex(order) {
     return Promise.resolve(order).then((order) => {
       return ZeroEx.getOrderHashHex(order);
     });
   }
+
+  // /**
+  //  * validateOrder
+  //  * @param {order} [order|Promise<order>] - The order to be validated
+  //  * @param {string|BigNumber} [takerTokenAmount=order.takerTokenAmount] - The amount of the taker token to verify; other amounts will be verified proportionally.
+  //  * @returns {void}
+  //  */
+  //  validateOrderFillable(order, takerTokenAmount) {
+  //    return Promise.resolve(order).then((order) => {
+  //      if(!takerTokenAmount) {
+  //
+  //      }
+  //    });
+  //  }
 
   /**
    * generateWatermarkedSalt
@@ -130,8 +156,59 @@ class OpenRelay {
     return salt.div("4294967296").floor().times("4294967296").plus('132727578');
   }
 
-
-
+  /**
+   * setMakerAllowances
+   * Sets allowances on the maker token and fee token to make sure the order is
+   * fillable.
+   * @param {order|Promise<order>} [order] - The order to set maker allowances for. The order's maker must be in web3.eth.accounts.
+   * @param {object} [options]
+   * @param {bool} [unlimited=false] - If true, the allowances for the maker token and fee token will be set to unlimited. If false, the allowances will be incremented by the amount in the order.
+   * @return {void}
+   */
+   setMakerAllowances(order, options={}) {
+     return new MineablePromise(this, Promise.all([
+       Promise.resolve(order),
+       this.zeroEx.exchange.getZRXTokenAddressAsync(),
+     ]).then((resolvedPromises) => {
+       order = resolvedPromises[0];
+       var zrxAddress = resolvedPromises[1];
+       var proxyAddress = resolvedPromises[2];
+       return Promise.all([
+         this.zeroEx.token.getProxyAllowanceAsync(order.makerTokenAddress, order.maker),
+         this.zeroEx.token.getProxyAllowanceAsync(zrxAddress, order.maker)
+       ]).then((resolvedPromises) => {
+         var makerTokenAllowance = resolvedPromises[0];
+         var makerFeeAllowance = resolvedPromises[1];
+         var setAllowancePromises = [];
+         if(options.unlimited === true) {
+           if(makerTokenAllowance.lt(MAX_UINT_256.div(2))) {
+             setAllowancePromises.push(
+               this.zeroEx.token.setUnlimitedProxyAllowanceAsync(order.makerTokenAddress, order.maker)
+             );
+           }
+           if(order.makerTokenAddress != zrxAddress && makerFeeAllowance.lt(MAX_UINT_256.div(2))) {
+             setAllowancePromises.push(
+               this.zeroEx.token.setUnlimitedProxyAllowanceAsync(zrxAddress, order.maker)
+             );
+           }
+         } else {
+           if(order.makerTokenAddress == zrxAddress) {
+             setAllowancePromises.push(
+               this.zeroEx.token.setProxyAllowanceAsync(order.makerTokenAddress, order.maker, makerTokenAllowance.plus(order.makerTokenAmount).plus(order.makerFee))
+             );
+           } else {
+             setAllowancePromises.push(
+               this.zeroEx.token.setProxyAllowanceAsync(order.makerTokenAddress, order.maker, makerTokenAllowance.plus(order.makerTokenAmount))
+             );
+             setAllowancePromises.push(
+               this.zeroEx.token.setProxyAllowanceAsync(zrxAddress, order.maker, makerFeeAllowance.plus(order.makerFee))
+             );
+           }
+         }
+         return Promise.all(setAllowancePromises);
+       });
+     }));
+   }
 }
 
 export default OpenRelay;

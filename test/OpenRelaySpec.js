@@ -9,6 +9,7 @@ import {ZeroEx} from '0x.js';
 
 
 const expect = chai.use(ChaiBN(BigNumber)).expect;
+const MAX_UINT_256 = new BigNumber(2).pow(256).minus(1)
 
 class MockFeeLookup {
   constructor() {}
@@ -27,7 +28,8 @@ function getTestRPC() {
   return TestRPC.provider({
     network_id: 50,
     db_path: path.join(__dirname, '.chaindb'),
-    mnemonic: "concert load couple harbor equip island argue ramp clarify fence smart topic"
+    mnemonic: "concert load couple harbor equip island argue ramp clarify fence smart topic",
+    logger: console,
   });
 }
 
@@ -35,7 +37,7 @@ describe('OpenRelay', () => {
   const web3 = new Web3();
   var latestSnapshot;
   web3.setProvider(getTestRPC());
-  before(function(done) {
+  beforeEach(function(done) {
     web3.currentProvider.sendAsync({
       jsonrpc: "2.0",
       method: "evm_snapshot",
@@ -49,7 +51,7 @@ describe('OpenRelay', () => {
       }
     });
   });
-  after(function(done) {
+  afterEach(function(done) {
     web3.currentProvider.sendAsync({
       jsonrpc: "2.0",
       method: "evm_revert",
@@ -196,7 +198,6 @@ describe('OpenRelay', () => {
         order.salt = order.salt = "42452002646230337759284911949218740433666254174089747348021014982854768673562";
         return openrelay.signOrder(order)
       }).then((signedOrder) => {
-        console.log(JSON.stringify(signedOrder.ecSignature));
         expect(signedOrder.ecSignature).to.be.eql({
           v: 27,
           r: "0x01e3dc5dedd9193d96c3bb7781b1fca83e26e2c757443e0582c3de516be78bac",
@@ -218,6 +219,127 @@ describe('OpenRelay', () => {
       )).then((signedOrder) => {
         openrelay.getOrderHashHex(signedOrder).then((hash) => {
           expect(ZeroEx.isValidSignature(hash, signedOrder.ecSignature, signedOrder.maker)).to.be.true;
+          done();
+        });
+      });
+    });
+  });
+  describe('openrelay.setMakerAllowances()', () => {
+    it('should set allowances equal to the requirement of the order', (done) => {
+      const openrelay = new OpenRelay(web3, {
+        _feeLookup: new MockFeeLookup(),
+      });
+      var addressPromise = Promise.all([
+        openrelay.zeroEx.etherToken.getContractAddressAsync(),
+        openrelay.zeroEx.exchange.getZRXTokenAddressAsync()
+      ]);
+      var zrxAddress;
+      addressPromise.then((resolvedPromises) => {
+        var wethAddress = resolvedPromises[0];
+        zrxAddress = resolvedPromises[1];
+        return openrelay.createOrder(
+          wethAddress,
+          "100000000000000000",
+          zrxAddress,
+          "58500000000000000",
+          {expirationUnixTimestampSec: "0"}
+        )
+      }).then((order) => {
+        var mineable = openrelay.setMakerAllowances(order);
+        mineable.then((txHashes) => {
+          expect(txHashes).to.have.lengthOf(2);
+        }).then(() => {
+          return mineable.mine();
+        }).then((results) => {
+            return Promise.all([
+              openrelay.zeroEx.token.getProxyAllowanceAsync(order.makerTokenAddress, order.maker),
+              openrelay.zeroEx.token.getProxyAllowanceAsync(zrxAddress, order.maker)
+            ]);
+        }).then((resolvedPromises) => {
+          var makerTokenAllowance = resolvedPromises[0];
+          var zrxAllowance = resolvedPromises[1];
+          expect(makerTokenAllowance).to.bignumber.equal(order.makerTokenAmount);
+          expect(zrxAllowance).to.bignumber.equal(order.makerFee);
+          done();
+        });
+      });
+    });
+    it('should set allowances equal to the requirement of the order, with ZRX as the maker token', (done) => {
+      const openrelay = new OpenRelay(web3, {
+        _feeLookup: new MockFeeLookup(),
+      });
+      var addressPromise = Promise.all([
+        openrelay.zeroEx.etherToken.getContractAddressAsync(),
+        openrelay.zeroEx.exchange.getZRXTokenAddressAsync()
+      ]);
+      var zrxAddress;
+      addressPromise.then((resolvedPromises) => {
+        var wethAddress = resolvedPromises[0];
+        zrxAddress = resolvedPromises[1];
+        return openrelay.createOrder(
+          zrxAddress,
+          "100000000000000000",
+          wethAddress,
+          "58500000000000000",
+          {expirationUnixTimestampSec: "0"}
+        )
+      }).then((order) => {
+        var mineable = openrelay.setMakerAllowances(order);
+        mineable.then((txHashes) => {
+          expect(txHashes).to.have.lengthOf(1);
+        }).then(() => {
+          return mineable.mine();
+        }).then((results) => {
+            return Promise.all([
+              openrelay.zeroEx.token.getProxyAllowanceAsync(order.makerTokenAddress, order.maker),
+              openrelay.zeroEx.token.getProxyAllowanceAsync(zrxAddress, order.maker)
+            ]);
+        }).then((resolvedPromises) => {
+          var makerTokenAllowance = resolvedPromises[0];
+          var zrxAllowance = resolvedPromises[1];
+          expect(makerTokenAllowance).to.bignumber.equal(zrxAllowance);
+          expect(makerTokenAllowance).to.bignumber.equal(order.makerTokenAmount.plus(order.makerFee));
+          done();
+        });
+      });
+    });
+    it('should set allowances required for the order to unlimited', (done) => {
+      const openrelay = new OpenRelay(web3, {
+        _feeLookup: new MockFeeLookup(),
+      });
+      var addressPromise = Promise.all([
+        openrelay.zeroEx.etherToken.getContractAddressAsync(),
+        openrelay.zeroEx.exchange.getZRXTokenAddressAsync()
+      ]);
+      var zrxAddress;
+      addressPromise.then((resolvedPromises) => {
+        var wethAddress = resolvedPromises[0];
+        zrxAddress = resolvedPromises[1];
+        return openrelay.createOrder(
+          wethAddress,
+          "100000000000000000",
+          zrxAddress,
+          "58500000000000000",
+          {expirationUnixTimestampSec: "0"}
+        )
+      }).then((order) => {
+        console.log(order.maker);
+        var mineable = openrelay.setMakerAllowances(order, {unlimited: true});
+        mineable.catch(console.log);
+        mineable.then((txHashes) => {
+          expect(txHashes).to.have.lengthOf(2);
+        }).then(() => {
+          return mineable.mine();
+        }).then((results) => {
+            return Promise.all([
+              openrelay.zeroEx.token.getProxyAllowanceAsync(order.makerTokenAddress, order.maker),
+              openrelay.zeroEx.token.getProxyAllowanceAsync(zrxAddress, order.maker)
+            ]);
+        }).then((resolvedPromises) => {
+          var makerTokenAllowance = resolvedPromises[0];
+          var zrxAllowance = resolvedPromises[1];
+          expect(makerTokenAllowance).to.bignumber.equal(MAX_UINT_256);
+          expect(zrxAllowance).to.bignumber.equal(MAX_UINT_256);
           done();
         });
       });
