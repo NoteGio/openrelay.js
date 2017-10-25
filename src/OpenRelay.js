@@ -166,17 +166,50 @@ class OpenRelay {
    * @return {void}
    */
    setMakerAllowances(order, options={}) {
-     return this._setAllowances(
-       order.makerTokenAddress,
-       order.makerTokenAmount,
-       order.makerFee,
-       order.maker,
-       options.unlimited === true,
-       new BigNumber("1"),
-     );
+     return new MineablePromise(this, Promise.resolve(order).then((order) => {
+       return this._setAllowances(
+         order.makerTokenAddress,
+         order.makerTokenAmount,
+         order.makerFee,
+         order.maker,
+         options.unlimited === true,
+         new BigNumber("1"),
+       );
+     }));
    }
+
+  /**
+   * setTakerAllowances
+   * Sets allowances on the taker token and fee token to make sure the order is
+   * fillable.
+   * @param {order|Promise<order>} [order] - The order to set taker allowances for.
+   * @param {object} [options]
+   * @param {bool} [options.unlimited=false] - If true, the allowances for the maker token and fee token will be set to unlimited. If false, the allowances will be incremented by the amount in the order.
+   * @param {bool} [options.account=openrelay.defaultAccount] - If true, the allowances for the maker token and fee token will be set to unlimited. If false, the allowances will be incremented by the amount in the order.
+   * @return {void}
+   */
+   setTakerAllowances(order, options={}) {
+     return new MineablePromise(this, Promise.all([
+       Promise.resolve(order),
+       this.defaultAccount
+     ]).then((resolvedPromises) => {
+       var order = resolvedPromises[0];
+       var defaultAccount = resolvedPromises[1];
+       console.log(JSON.stringify(order));
+       var fillAmount = options.takerFillAmount || order.takerTokenAmount;
+       return this._setAllowances(
+         order.takerTokenAddress,
+         fillAmount,
+         order.takerFee.times(fillAmount).div(order.takerTokenAmount),
+         options.account || defaultAccount,
+         options.unlimited === true,
+         new BigNumber("-1"),
+       )
+     }));
+   }
+
    _setAllowances(tokenAddress, tokenAmount, feeAmount, account, unlimited, direction) {
-     return new MineablePromise(this, this.zeroEx.exchange.getZRXTokenAddressAsync()
+     return this.zeroEx.exchange.getZRXTokenAddressAsync()
      .then((zrxAddress) => {
        return Promise.all([
          this.zeroEx.token.getProxyAllowanceAsync(tokenAddress, account),
@@ -215,7 +248,7 @@ class OpenRelay {
          }
          return Promise.all(setAllowancePromises);
        });
-     }));
+     });
    }
 }
 
