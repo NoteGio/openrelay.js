@@ -1,6 +1,7 @@
 import {ZeroEx} from '0x.js';
 import {MineablePromise} from './MineablePromise.js';
 import {FeeLookup} from './FeeLookup.js';
+import {OrderTransmitter} from './OrderTransmitter.js';
 import BigNumber from 'bignumber.js';
 import rp from 'request-promise-native';
 
@@ -40,6 +41,7 @@ class OpenRelay {
     this.exchangeContractAddress = this.zeroEx.exchange.getContractAddressAsync();
     this.apiVersion = "/v0.0/";
     this.feeLookup = options._feeLookup || new FeeLookup(this.relayBaseURL, this.apiVersion);
+    this.orderTransmitter = options._orderTransmitter || new OrderTransmitter(this.relayBaseURL, this.apiVersion);
   }
 
   /**
@@ -278,6 +280,19 @@ class OpenRelay {
     });
   }
 
+  /**
+  * submitOrder
+  * Submits a signed order to the relay
+  * @param {signedOrder|Promise<signedOrder>} [signedOrder] - A signed order to be transmitted to the Relay
+  * @returns {Promise<void>}
+  */
+  submitOrder(signedOrder) {
+    return Promise.resolve(signedOrder).then((signedOrder) => {
+      return this.validateOrderFillable(signedOrder).then(() => {
+        return this.orderTransmitter.submitOrder(signedOrder);
+      });
+    });
+  }
 }
 
 export default OpenRelay;

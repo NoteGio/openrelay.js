@@ -25,6 +25,15 @@ class MockFeeLookup {
   }
 }
 
+class MockTransmitOrder {
+  constructor() {
+    this.orders = [];
+  }
+  submitOrder(signedOrder) {
+    this.orders.push(signedOrder);
+  }
+}
+
 function getTestRPC() {
   return TestRPC.provider({
     network_id: 50,
@@ -561,7 +570,7 @@ describe('OpenRelay', () => {
       });
     });
   });
-  describe('openrelay.validateOrderFillable()', () => {
+  describe('openrelay.validateFillOrder()', () => {
     it("should find the order fillable", (done) => {
       const makerRelay = new OpenRelay(web3, {
         _feeLookup: new MockFeeLookup(),
@@ -719,8 +728,59 @@ describe('OpenRelay', () => {
           makerAllowances.mine(),
           depositEth.mine(),
         ]).then(() => {
-          takerRelay.validateOrderFillable(signedOrder).then(expect.fail).catch(() => {done()});
+          takerRelay.validateFillOrder(signedOrder).then(expect.fail).catch(() => {done()});
         });
+      });
+    });
+  });
+  describe('openrelay.submitOrder()', () => {
+    it("should find the order fillable and transmit it", (done) => {
+      const openrelay = new OpenRelay(web3, {
+        _feeLookup: new MockFeeLookup(),
+        _orderTransmitter: new MockTransmitOrder(),
+      });
+      Promise.all([
+        openrelay.zeroEx.etherToken.getContractAddressAsync(),
+        openrelay.zeroEx.exchange.getZRXTokenAddressAsync(),
+      ]).then((resolvedPromises) => {
+        var wethAddress = resolvedPromises[0];
+        var zrxAddress = resolvedPromises[1];
+        var order = openrelay.createOrder(
+          zrxAddress,
+          "100000000000000000",
+          wethAddress,
+          "58500000000000000",
+        );
+        openrelay.setMakerAllowances(order).mine().then(() => {
+          openrelay.submitOrder(openrelay.signOrder(
+            order
+          )).catch(expect.fail).then(() => {
+            expect(openrelay.orderTransmitter.orders).to.have.lengthOf(1);
+            done();
+          });
+        })
+      });
+    });
+    it("should find the order invalid and fail", (done) => {
+      const openrelay = new OpenRelay(web3, {
+        _feeLookup: new MockFeeLookup(),
+        _orderTransmitter: new MockTransmitOrder(),
+      });
+      Promise.all([
+        openrelay.zeroEx.etherToken.getContractAddressAsync(),
+        openrelay.zeroEx.exchange.getZRXTokenAddressAsync(),
+      ]).then((resolvedPromises) => {
+        var wethAddress = resolvedPromises[0];
+        var zrxAddress = resolvedPromises[1];
+        var order = openrelay.createOrder(
+          zrxAddress,
+          "100000000000000000",
+          wethAddress,
+          "58500000000000000",
+        );
+        openrelay.submitOrder(openrelay.signOrder(
+          order
+        )).then(expect.fail).catch(() => {done()});
       });
     });
   });
