@@ -131,11 +131,11 @@ class OpenRelay {
    * @returns {void}
    * @throws Will throw if order cannot be filled
    */
-   validateOrderFillable(order) {
-     return Promise.resolve(order).then((order) => {
-       return this.zeroEx.exchange.validateOrderFillableOrThrowAsync(order);
-     });
-   }
+  validateOrderFillable(order) {
+    return Promise.resolve(order).then((order) => {
+      return this.zeroEx.exchange.validateOrderFillableOrThrowAsync(order);
+    });
+  }
 
   /**
    * validateFillOrder
@@ -150,17 +150,17 @@ class OpenRelay {
    * @returns {void}
    * @throws Will throw if order cannot be filled
    */
-   validateFillOrder(order, options={}) {
-     return Promise.all([
-       Promise.resolve(order),
-       this.defaultAccount,
-     ]).then((resolvedPromises) => {
-       var order = resolvedPromises[0];
-       var takerAddress = options.takerAddress || resolvedPromises[1];
-       var takerTokenAmount = options.takerTokenAmount || order.takerTokenAmount;
-       return this.zeroEx.exchange.validateFillOrderThrowIfInvalidAsync(order, takerTokenAmount, takerAddress);
-     });
-   }
+  validateFillOrder(order, options={}) {
+    return Promise.all([
+      Promise.resolve(order),
+      this.defaultAccount,
+    ]).then((resolvedPromises) => {
+      var order = resolvedPromises[0];
+      var takerAddress = options.takerAddress || resolvedPromises[1];
+      var takerTokenAmount = options.takerTokenAmount || order.takerTokenAmount;
+      return this.zeroEx.exchange.validateFillOrderThrowIfInvalidAsync(order, takerTokenAmount, takerAddress);
+    });
+  }
 
   /**
    * generateWatermarkedSalt
@@ -177,6 +177,7 @@ class OpenRelay {
    *
    * Essentially, if the last 4 bytes of the salt match the hex `07E9431A`,
    * we can be fairly certain the order was generated with OpenRelay.js
+   * @returns {string}
    */
   generateWatermarkedSalt() {
     var salt = ZeroEx.generatePseudoRandomSalt();
@@ -192,18 +193,18 @@ class OpenRelay {
    * @param {bool} [unlimited=false] - If true, the allowances for the maker token and fee token will be set to unlimited. If false, the allowances will be incremented by the amount in the order.
    * @return {void}
    */
-   setMakerAllowances(order, options={}) {
-     return new MineablePromise(this, Promise.resolve(order).then((order) => {
-       return this._setAllowances(
-         order.makerTokenAddress,
-         order.makerTokenAmount,
-         order.makerFee,
-         order.maker,
-         options.unlimited === true,
-         new BigNumber("1"),
-       );
-     }));
-   }
+  setMakerAllowances(order, options={}) {
+    return new MineablePromise(this, Promise.resolve(order).then((order) => {
+      return this._setAllowances(
+        order.makerTokenAddress,
+        order.makerTokenAmount,
+        order.makerFee,
+        order.maker,
+        options.unlimited === true,
+        new BigNumber("1"),
+      );
+    }));
+  }
 
   /**
    * setTakerAllowances
@@ -215,67 +216,68 @@ class OpenRelay {
    * @param {bool} [options.account=openrelay.defaultAccount] - If true, the allowances for the maker token and fee token will be set to unlimited. If false, the allowances will be incremented by the amount in the order.
    * @return {void}
    */
-   setTakerAllowances(order, options={}) {
-     return new MineablePromise(this, Promise.all([
-       Promise.resolve(order),
-       this.defaultAccount
-     ]).then((resolvedPromises) => {
-       var order = resolvedPromises[0];
-       var defaultAccount = resolvedPromises[1];
-       var fillAmount = options.takerFillAmount || order.takerTokenAmount;
-       return this._setAllowances(
-         order.takerTokenAddress,
-         fillAmount,
-         order.takerFee.times(fillAmount).div(order.takerTokenAmount),
-         options.account || defaultAccount,
-         options.unlimited === true,
-         new BigNumber("-1"),
-       )
-     }));
-   }
+  setTakerAllowances(order, options={}) {
+    return new MineablePromise(this, Promise.all([
+      Promise.resolve(order),
+      this.defaultAccount
+    ]).then((resolvedPromises) => {
+      var order = resolvedPromises[0];
+      var defaultAccount = resolvedPromises[1];
+      var fillAmount = options.takerFillAmount || order.takerTokenAmount;
+      return this._setAllowances(
+        order.takerTokenAddress,
+        fillAmount,
+        order.takerFee.times(fillAmount).div(order.takerTokenAmount),
+        options.account || defaultAccount,
+        options.unlimited === true,
+        new BigNumber("-1"),
+      )
+    }));
+  }
 
-   _setAllowances(tokenAddress, tokenAmount, feeAmount, account, unlimited, direction) {
-     return this.zeroEx.exchange.getZRXTokenAddressAsync()
-     .then((zrxAddress) => {
-       return Promise.all([
-         this.zeroEx.token.getProxyAllowanceAsync(tokenAddress, account),
-         this.zeroEx.token.getProxyAllowanceAsync(zrxAddress, account)
-       ]).then((resolvedPromises) => {
-         var tokenAllowance = resolvedPromises[0];
-         var feeAllowance = resolvedPromises[1];
-         var setAllowancePromises = [];
-         if(unlimited === true) {
-           if(tokenAllowance.lt(MAX_UINT_256.div(2))) {
-             setAllowancePromises.push(
-               this.zeroEx.token.setUnlimitedProxyAllowanceAsync(tokenAddress, account)
-             );
-           }
-           if(tokenAddress != zrxAddress && feeAllowance.lt(MAX_UINT_256.div(2))) {
-             setAllowancePromises.push(
-               this.zeroEx.token.setUnlimitedProxyAllowanceAsync(zrxAddress, account)
-             );
-           }
-         } else {
-           if(tokenAddress == zrxAddress) {
-             // If the token we're setting an allowance for *is* ZRX then
-             //   direction is +1 for the maker, because the taker needs to be able to fill the order plus fees
-             //   direction is -1 for the taker, because the taker will be able to use the completed order to pay fees
-             setAllowancePromises.push(
-               this.zeroEx.token.setProxyAllowanceAsync(tokenAddress, account, tokenAllowance.plus(tokenAmount).plus(feeAmount.times(direction)))
-             );
-           } else {
-             setAllowancePromises.push(
-               this.zeroEx.token.setProxyAllowanceAsync(tokenAddress, account, tokenAllowance.plus(tokenAmount))
-             );
-             setAllowancePromises.push(
-               this.zeroEx.token.setProxyAllowanceAsync(zrxAddress, account, feeAllowance.plus(feeAmount))
-             );
-           }
-         }
-         return Promise.all(setAllowancePromises);
-       });
-     });
-   }
+  _setAllowances(tokenAddress, tokenAmount, feeAmount, account, unlimited, direction) {
+    return this.zeroEx.exchange.getZRXTokenAddressAsync()
+    .then((zrxAddress) => {
+      return Promise.all([
+        this.zeroEx.token.getProxyAllowanceAsync(tokenAddress, account),
+        this.zeroEx.token.getProxyAllowanceAsync(zrxAddress, account)
+      ]).then((resolvedPromises) => {
+        var tokenAllowance = resolvedPromises[0];
+        var feeAllowance = resolvedPromises[1];
+        var setAllowancePromises = [];
+        if(unlimited === true) {
+          if(tokenAllowance.lt(MAX_UINT_256.div(2))) {
+            setAllowancePromises.push(
+              this.zeroEx.token.setUnlimitedProxyAllowanceAsync(tokenAddress, account)
+            );
+          }
+          if(tokenAddress != zrxAddress && feeAllowance.lt(MAX_UINT_256.div(2))) {
+            setAllowancePromises.push(
+              this.zeroEx.token.setUnlimitedProxyAllowanceAsync(zrxAddress, account)
+            );
+          }
+        } else {
+          if(tokenAddress == zrxAddress) {
+            // If the token we're setting an allowance for *is* ZRX then
+            //   direction is +1 for the maker, because the taker needs to be able to fill the order plus fees
+            //   direction is -1 for the taker, because the taker will be able to use the completed order to pay fees
+            setAllowancePromises.push(
+              this.zeroEx.token.setProxyAllowanceAsync(tokenAddress, account, tokenAllowance.plus(tokenAmount).plus(feeAmount.times(direction)))
+            );
+          } else {
+            setAllowancePromises.push(
+              this.zeroEx.token.setProxyAllowanceAsync(tokenAddress, account, tokenAllowance.plus(tokenAmount))
+            );
+            setAllowancePromises.push(
+              this.zeroEx.token.setProxyAllowanceAsync(zrxAddress, account, feeAllowance.plus(feeAmount))
+            );
+          }
+        }
+        return Promise.all(setAllowancePromises);
+      });
+    });
+  }
+
 }
 
 export default OpenRelay;

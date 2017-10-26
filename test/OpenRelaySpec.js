@@ -613,7 +613,7 @@ describe('OpenRelay', () => {
           takerAllowances.mine(),
           depositEth.mine(),
         ]).then(() => {
-          takerRelay.validateOrderFillable(signedOrder).then(done);
+          takerRelay.validateFillOrder(signedOrder).then(done);
         });
       });
     });
@@ -666,7 +666,7 @@ describe('OpenRelay', () => {
           takerAllowances.mine(),
           depositEth.mine(),
         ]).then(() => {
-          takerRelay.validateOrderFillable(signedOrder).then(expect.fail).catch(() => {done()});
+          takerRelay.validateFillOrder(signedOrder).then(expect.fail).catch(() => {done()});
         });
       });
     });
