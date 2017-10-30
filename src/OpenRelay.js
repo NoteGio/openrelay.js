@@ -4,6 +4,7 @@ import {FeeLookup} from './FeeLookup.js';
 import {OrderTransmitter} from './OrderTransmitter.js';
 import BigNumber from 'bignumber.js';
 import rp from 'request-promise-native';
+import * as bin from './BinaryOrder';
 
 const MAX_UINT_256 = new BigNumber(2).pow(256).minus(1);
 
@@ -36,12 +37,13 @@ class OpenRelay {
       });
     }
     this.defaultFeeRecipient = options.defaultFeeRecipient || "0xc22d5b2951db72b44cfb8089bb8cd374a3c354ea";
+    this.useBin = options.useBin || true;
     this.zeroEx = options.zeroEx || new ZeroEx(this.web3.currentProvider);
     this.pollingIntervalMs = options.pollingIntervalMs || 500;
     this.exchangeContractAddress = this.zeroEx.exchange.getContractAddressAsync();
     this.apiVersion = "/v0.0/";
     this.feeLookup = options._feeLookup || new FeeLookup(this.relayBaseURL, this.apiVersion);
-    this.orderTransmitter = options._orderTransmitter || new OrderTransmitter(this.relayBaseURL, this.apiVersion);
+    this.orderTransmitter = options._orderTransmitter || new OrderTransmitter(this.relayBaseURL, this.apiVersion, this.useBin);
   }
 
   /**
@@ -159,7 +161,18 @@ class OpenRelay {
     ]).then((resolvedPromises) => {
       var order = resolvedPromises[0];
       var takerAddress = options.takerAddress || resolvedPromises[1];
-      var takerTokenAmount = options.takerTokenAmount || order.takerTokenAmount;
+      var takerTokenAmount;
+      if(order.takerTokenAmountAvailable) {
+        if(options.takerTokenAmount) {
+          if(options.takerTokenAmount.gt(order.takerTokenAmountAvailable)) {
+            throw "Insufficient remaining balance"
+          }
+        } else {
+          takerTokenAmount = order.takerTokenAmountAvailable;
+        }
+      } else {
+        takerTokenAmount = order.takerTokenAmount;
+      }
       return this.zeroEx.exchange.validateFillOrderThrowIfInvalidAsync(order, takerTokenAmount, takerAddress);
     });
   }

@@ -69,6 +69,46 @@ describe('OpenRelay', () => {
       id: new Date().getTime()
     }, done)
   });
+  describe('openrelay.getOrderHashHex()', () => {
+    it('should return a proper hash from an order', (done) => {
+      const openrelay = new OpenRelay(web3, {
+        _feeLookup: new MockFeeLookup(),
+      });
+      openrelay.createOrder(
+        "0x2956356cd2a2bf3202f771f50d3d14a367b48070",
+        "100000000000000000",
+        "0xc66ea802717bfb9833400264dd12c2bceaa34a6d",
+        "58500000000000000",
+        {expirationUnixTimestampSec: "0"}
+      ).then((order) => {
+        // We have to set a constant salt to ensure the hash is consistent
+        order.salt = "42452002646230337759284911949218740433666254174089747348021014982854768673562";
+        openrelay.getOrderHashHex(order).then((hash) => {
+          expect(hash).to.equal("0x6d3991e0b683deeb66790d25c0bce4e8e8082eef053900d929dc23012df58054");
+          done();
+        });
+      });
+    });
+    it('should return a proper hash from a promise', (done) => {
+      const openrelay = new OpenRelay(web3, {
+        _feeLookup: new MockFeeLookup(),
+      });
+      openrelay.createOrder(
+        "0x2956356cd2a2bf3202f771f50d3d14a367b48070",
+        "100000000000000000",
+        "0xc66ea802717bfb9833400264dd12c2bceaa34a6d",
+        "58500000000000000",
+        {expirationUnixTimestampSec: "0"}
+      ).then((order) => {
+        // We have to set a constant salt to ensure the hash is consistent
+        order.salt = "42452002646230337759284911949218740433666254174089747348021014982854768673562";
+        openrelay.getOrderHashHex(Promise.resolve(order)).then((hash) => {
+          expect(hash).to.equal("0x6d3991e0b683deeb66790d25c0bce4e8e8082eef053900d929dc23012df58054");
+          done();
+        });
+      });
+    });
+  });
   describe('openrelay.createOrder()', () => {
     it('should create an order with a 100% maker fee', (done) => {
       const openrelay = new OpenRelay(web3, {
@@ -153,46 +193,6 @@ describe('OpenRelay', () => {
       })
     });
   });
-  describe('openrelay.getOrderHashHex()', () => {
-    it('should return a proper hash from an order', (done) => {
-      const openrelay = new OpenRelay(web3, {
-        _feeLookup: new MockFeeLookup(),
-      });
-      openrelay.createOrder(
-        "0x2956356cd2a2bf3202f771f50d3d14a367b48070",
-        "100000000000000000",
-        "0xc66ea802717bfb9833400264dd12c2bceaa34a6d",
-        "58500000000000000",
-        {expirationUnixTimestampSec: "0"}
-      ).then((order) => {
-        // We have to set a constant salt to ensure the hash is consistent
-        order.salt = "42452002646230337759284911949218740433666254174089747348021014982854768673562";
-        openrelay.getOrderHashHex(order).then((hash) => {
-          expect(hash).to.equal("0x6d3991e0b683deeb66790d25c0bce4e8e8082eef053900d929dc23012df58054");
-          done();
-        });
-      });
-    });
-    it('should return a proper hash from a promise', (done) => {
-      const openrelay = new OpenRelay(web3, {
-        _feeLookup: new MockFeeLookup(),
-      });
-      openrelay.createOrder(
-        "0x2956356cd2a2bf3202f771f50d3d14a367b48070",
-        "100000000000000000",
-        "0xc66ea802717bfb9833400264dd12c2bceaa34a6d",
-        "58500000000000000",
-        {expirationUnixTimestampSec: "0"}
-      ).then((order) => {
-        // We have to set a constant salt to ensure the hash is consistent
-        order.salt = "42452002646230337759284911949218740433666254174089747348021014982854768673562";
-        openrelay.getOrderHashHex(Promise.resolve(order)).then((hash) => {
-          expect(hash).to.equal("0x6d3991e0b683deeb66790d25c0bce4e8e8082eef053900d929dc23012df58054");
-          done();
-        });
-      });
-    });
-  });
   describe('openrelay.signOrder()', () => {
     it('should return a proper signature from an order', (done) => {
       const openrelay = new OpenRelay(web3, {
@@ -205,7 +205,7 @@ describe('OpenRelay', () => {
         "58500000000000000",
         {expirationUnixTimestampSec: "0"}
       ).then((order) => {
-        order.salt = order.salt = "42452002646230337759284911949218740433666254174089747348021014982854768673562";
+        order.salt = "42452002646230337759284911949218740433666254174089747348021014982854768673562";
         return openrelay.signOrder(order)
       }).then((signedOrder) => {
         expect(signedOrder.ecSignature).to.be.eql({

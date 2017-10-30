@@ -1,15 +1,26 @@
 import rp from 'request-promise-native';
+import * as bin from './BinaryOrder';
 
 export class OrderTransmitter {
-  constructor(baseUrl, apiVersion) {
-    this.feeUrl = `${this.openrelayBaseURL}/${this.apiVersion}/order`;
+  constructor(baseUrl, apiVersion, useBin) {
+    this.orderUrl = `${baseUrl}/${apiVersion}/order`;
+    this.useBin = useBin;
   }
   submitOrder(order) {
-    return rp({
-      method: 'POST',
-      uri: this.feeUrl,
-      body: order,
-      json: true,
-    });
+    if(this.useBin) {
+      return rp({
+        method: 'POST',
+        uri: this.order,
+        body: bin.serialize(order),
+        headers: {'Content-Type': 'application/octet-stream'}
+      });
+    } else {
+      return rp({
+        method: 'POST',
+        uri: this.orderUrl,
+        body: order,
+        json: true,
+      });
+    }
   }
 }
