@@ -10,7 +10,7 @@ export class OrderTransmitter {
     if(this.useBin) {
       return rp({
         method: 'POST',
-        uri: this.order,
+        uri: this.orderUrl,
         body: bin.serialize(order),
         headers: {'Content-Type': 'application/octet-stream'}
       });

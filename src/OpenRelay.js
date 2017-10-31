@@ -41,7 +41,7 @@ class OpenRelay {
     this.zeroEx = options.zeroEx || new ZeroEx(this.web3.currentProvider);
     this.pollingIntervalMs = options.pollingIntervalMs || 500;
     this.exchangeContractAddress = this.zeroEx.exchange.getContractAddressAsync();
-    this.apiVersion = "/v0.0/";
+    this.apiVersion = "v0.0";
     this.feeLookup = options._feeLookup || new FeeLookup(this.relayBaseURL, this.apiVersion);
     this.orderTransmitter = options._orderTransmitter || new OrderTransmitter(this.relayBaseURL, this.apiVersion, this.useBin);
   }
