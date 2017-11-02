@@ -2,7 +2,10 @@ import {ZeroEx} from '0x.js';
 import BigNumber from 'bignumber.js';
 
 export function parse(data, sigCheck=true) {
-  var order = JSON.parse(data);
+  return process(JSON.parse(data), sigCheck);
+}
+
+export function process(order, sigCheck) {
   order.makerTokenAmount = new BigNumber(order.makerTokenAmount);
   order.takerTokenAmount = new BigNumber(order.takerTokenAmount);
   order.makerFee = new BigNumber(order.makerFee);

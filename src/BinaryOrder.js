@@ -41,6 +41,13 @@ export function parse(data) {
   return order;
 }
 
+export function parseList(data) {
+  var orders = [];
+  for(var i=0; i < data.length / 441; i++){
+    orders.push(bin.parse(data.slice(i*441, (i+1)*441)));
+  }
+  return orders;
+}
 
 function bnToBuffer(value) {
   var bn = new BigNumber(value)
