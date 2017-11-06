@@ -1,6 +1,7 @@
 import chai from 'chai';
 import OpenRelay from '../src/OpenRelay';
 import {MineablePromise} from '../src/MineablePromise';
+import {OrderFilter} from '../src/OrderFilter';
 import Web3 from "web3";
 import TestRPC from 'ethereumjs-testrpc';
 import BigNumber from 'bignumber.js';
@@ -781,6 +782,39 @@ describe('OpenRelay', () => {
         openrelay.submitOrder(openrelay.signOrder(
           order
         )).then(expect.fail).catch(() => {done()});
+      });
+    });
+  });
+  describe('openrelay.search()', () => {
+    it('should return an item matching the parameters', (done) => {
+      const openrelay = new OpenRelay(web3, {
+        _feeLookup: new MockFeeLookup(),
+      });
+      var orderPromises = [];
+      orderPromises.push(openrelay.signOrder(openrelay.createOrder(
+        "0x2956356cd2a2bf3202f771f50d3d14a367b48070",
+        "100000000000000000",
+        "0xc66ea802717bfb9833400264dd12c2bceaa34a6d",
+        "58500000000000000",
+        {expirationUnixTimestampSec: "0"}
+      )));
+      orderPromises.push(openrelay.signOrder(openrelay.createOrder(
+        "0xc66ea802717bfb9833400264dd12c2bceaa34a6d",
+        "58500000000000000",
+        "0x2956356cd2a2bf3202f771f50d3d14a367b48070",
+        "100000000000000000",
+        {expirationUnixTimestampSec: "0"}
+      )));
+      Promise.all(orderPromises).then((result) => {
+        openrelay.orderLookup = new OrderFilter(result);
+      }).then(() => {
+        openrelay.search({
+          makerTokenAddress: "0xc66ea802717bfb9833400264dd12c2bceaa34a6d",
+        }).then((results) => {
+          expect(results).to.have.lengthOf(1);
+          expect(results[0].makerTokenAmount).to.bignumber.equal(new BigNumber("58500000000000000"));
+          done();
+        })
       });
     });
   });

@@ -29,7 +29,7 @@ export class OrderLookup {
     this.searchUrl = `${baseUrl}/${apiVersion}/orders`;
     this.useBin = useBin;
   }
-  search(parameters) {
+  search(parameters={}) {
     var params = copyKnownParams(parameters, expectedSearchParams);
 
     if(this.useBin) {

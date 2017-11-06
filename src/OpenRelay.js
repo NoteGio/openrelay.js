@@ -2,6 +2,7 @@ import {ZeroEx} from '0x.js';
 import {MineablePromise} from './MineablePromise.js';
 import {FeeLookup} from './FeeLookup.js';
 import {OrderTransmitter} from './OrderTransmitter.js';
+import {OrderLookup} from './OrderLookup.js'
 import BigNumber from 'bignumber.js';
 import rp from 'request-promise-native';
 import * as bin from './BinaryOrder';
@@ -44,6 +45,7 @@ class OpenRelay {
     this.apiVersion = "v0.0";
     this.feeLookup = options._feeLookup || new FeeLookup(this.relayBaseURL, this.apiVersion);
     this.orderTransmitter = options._orderTransmitter || new OrderTransmitter(this.relayBaseURL, this.apiVersion, this.useBin);
+    this.orderLookup = options._orderLookup || new OrderLookup(this.relayBaseURL, this.apiVersion, this.useBin);
   }
 
   /**
@@ -306,6 +308,23 @@ class OpenRelay {
       });
     });
   }
+
+  /**
+   * search
+   * Searches the order book for orders matching the specified parameters.
+   * @param {object} [parameters]
+   * @param {string} [parameters.exchangeContractAddress] - Match orders with the specified exchangeContractAddress
+   * @param {string} [parameters.tokenAddress] - Match orders with the specified makerTokenAddress or takerTokenAddress
+   * @param {string} [parameters.makerTokenAddress] - Match orders with the specified makerTokenAddress
+   * @param {string} [parameters.takerTokenAddress] - Match orders with the specified takerTokenAddress
+   * @param {string} [parameters.maker] - Match orders with the specified maker
+   * @param {string} [parameters.taker] - Match orders with the specified taker
+   * @param {string} [parameters.trader] - Match orders with the specified maker or taker
+   * @param {string} [parameters.feeRecipient] - Match orders with the specified feeRecipient
+   */
+   search(parameters) {
+     return this.orderLookup.search(parameters);
+   }
 }
 
 export default OpenRelay;
