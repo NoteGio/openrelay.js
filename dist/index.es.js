@@ -677,5 +677,5 @@ var OpenRelay = function () {
   return OpenRelay;
 }();
 
-export { OpenRelay };
+export { OpenRelay, MineablePromise, FeeLookup, OrderLookup };
 //# sourceMappingURL=index.es.js.map
