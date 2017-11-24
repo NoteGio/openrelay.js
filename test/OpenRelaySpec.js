@@ -72,7 +72,7 @@ describe('OpenRelay', () => {
   });
   describe('openrelay.getOrderHashHex()', () => {
     it('should return a proper hash from an order', (done) => {
-      const openrelay = new OpenRelay(web3, {
+      const openrelay = new OpenRelay(web3.currentProvider, {
         _feeLookup: new MockFeeLookup(),
       });
       openrelay.createOrder(
@@ -91,7 +91,7 @@ describe('OpenRelay', () => {
       });
     });
     it('should return a proper hash from a promise', (done) => {
-      const openrelay = new OpenRelay(web3, {
+      const openrelay = new OpenRelay(web3.currentProvider, {
         _feeLookup: new MockFeeLookup(),
       });
       openrelay.createOrder(
@@ -112,7 +112,7 @@ describe('OpenRelay', () => {
   });
   describe('openrelay.createOrder()', () => {
     it('should create an order with a 100% maker fee', (done) => {
-      const openrelay = new OpenRelay(web3, {
+      const openrelay = new OpenRelay(web3.currentProvider, {
         _feeLookup: new MockFeeLookup(),
       });
       // Replace the feeLookup for testing
@@ -134,7 +134,7 @@ describe('OpenRelay', () => {
       })
     });
     it('should create an order with a predefined expiration', (done) => {
-      const openrelay = new OpenRelay(web3, {
+      const openrelay = new OpenRelay(web3.currentProvider, {
         _feeLookup: new MockFeeLookup(),
       });
       // Replace the feeLookup for testing
@@ -152,7 +152,7 @@ describe('OpenRelay', () => {
       })
     });
     it('should create an order with a calculated expiration', (done) => {
-      const openrelay = new OpenRelay(web3, {
+      const openrelay = new OpenRelay(web3.currentProvider, {
         _feeLookup: new MockFeeLookup(),
       });
       // Replace the feeLookup for testing
@@ -170,7 +170,7 @@ describe('OpenRelay', () => {
       })
     });
     it('should create an order with a split maker fee', (done) => {
-      const openrelay = new OpenRelay(web3, {
+      const openrelay = new OpenRelay(web3.currentProvider, {
         _feeLookup: new MockFeeLookup(),
       });
       // Replace the feeLookup for testing
@@ -196,7 +196,7 @@ describe('OpenRelay', () => {
   });
   describe('openrelay.signOrder()', () => {
     it('should return a proper signature from an order', (done) => {
-      const openrelay = new OpenRelay(web3, {
+      const openrelay = new OpenRelay(web3.currentProvider, {
         _feeLookup: new MockFeeLookup(),
       });
       openrelay.createOrder(
@@ -218,7 +218,7 @@ describe('OpenRelay', () => {
       });
     });
     it('should return a proper signature from a promise', (done) => {
-      const openrelay = new OpenRelay(web3, {
+      const openrelay = new OpenRelay(web3.currentProvider, {
         _feeLookup: new MockFeeLookup(),
       });
       openrelay.signOrder(openrelay.createOrder(
@@ -236,7 +236,7 @@ describe('OpenRelay', () => {
   });
   describe('openrelay.setMakerAllowances()', () => {
     it('should set allowances equal to the requirement of the order', (done) => {
-      const openrelay = new OpenRelay(web3, {
+      const openrelay = new OpenRelay(web3.currentProvider, {
         _feeLookup: new MockFeeLookup(),
       });
       var addressPromise = Promise.all([
@@ -274,7 +274,7 @@ describe('OpenRelay', () => {
       });
     });
     it('should set allowances equal to the requirement of the order, with ZRX as the maker token', (done) => {
-      const openrelay = new OpenRelay(web3, {
+      const openrelay = new OpenRelay(web3.currentProvider, {
         _feeLookup: new MockFeeLookup(),
       });
       var addressPromise = Promise.all([
@@ -312,7 +312,7 @@ describe('OpenRelay', () => {
       });
     });
     it('should set allowances required for the order to unlimited', (done) => {
-      const openrelay = new OpenRelay(web3, {
+      const openrelay = new OpenRelay(web3.currentProvider, {
         _feeLookup: new MockFeeLookup(),
       });
       var addressPromise = Promise.all([
@@ -353,7 +353,7 @@ describe('OpenRelay', () => {
   });
   describe('openrelay.setTakerAllowances()', () => {
     it('should set allowances equal to the requirement of the order', (done) => {
-      const openrelay = new OpenRelay(web3, {
+      const openrelay = new OpenRelay(web3.currentProvider, {
         _feeLookup: new MockFeeLookup(),
       });
       var addressPromise = Promise.all([
@@ -397,7 +397,7 @@ describe('OpenRelay', () => {
       });
     });
     it('should set allowances equal to the requirement of the order, with ZRX as the taker token', (done) => {
-      const openrelay = new OpenRelay(web3, {
+      const openrelay = new OpenRelay(web3.currentProvider, {
         _feeLookup: new MockFeeLookup(),
       });
       var addressPromise = Promise.all([
@@ -438,7 +438,7 @@ describe('OpenRelay', () => {
       });
     });
     it('should set allowances required for the order to unlimited', (done) => {
-      const openrelay = new OpenRelay(web3, {
+      const openrelay = new OpenRelay(web3.currentProvider, {
         _feeLookup: new MockFeeLookup(),
       });
       var addressPromise = Promise.all([
@@ -480,7 +480,7 @@ describe('OpenRelay', () => {
       });
     });
     it('should set allowances proportional to the fill amount', (done) => {
-      const openrelay = new OpenRelay(web3, {
+      const openrelay = new OpenRelay(web3.currentProvider, {
         _feeLookup: new MockFeeLookup(),
       });
       var addressPromise = Promise.all([
@@ -526,7 +526,7 @@ describe('OpenRelay', () => {
   });
   describe('openrelay.validateOrderFillable()', () => {
     it("should find the order fillable", (done) => {
-      const openrelay = new OpenRelay(web3, {
+      const openrelay = new OpenRelay(web3.currentProvider, {
         _feeLookup: new MockFeeLookup(),
       });
       Promise.all([
@@ -549,7 +549,7 @@ describe('OpenRelay', () => {
       });
     });
     it("should fail due to insufficient maker funds / allowances", (done) => {
-      const openrelay = new OpenRelay(web3, {
+      const openrelay = new OpenRelay(web3.currentProvider, {
         _feeLookup: new MockFeeLookup(),
       });
       Promise.all([
@@ -573,7 +573,7 @@ describe('OpenRelay', () => {
   });
   describe('openrelay.validateFillOrder()', () => {
     it("should find the order fillable", (done) => {
-      const makerRelay = new OpenRelay(web3, {
+      const makerRelay = new OpenRelay(web3.currentProvider, {
         _feeLookup: new MockFeeLookup(),
       });
       var takerAccount = new Promise((resolve, reject) => {
@@ -581,7 +581,7 @@ describe('OpenRelay', () => {
           resolve(accounts[1]);
         });
       });
-      const takerRelay = new OpenRelay(web3, {
+      const takerRelay = new OpenRelay(web3.currentProvider, {
         defaultAccount: takerAccount,
         _feeLookup: new MockFeeLookup(),
       });
@@ -628,7 +628,7 @@ describe('OpenRelay', () => {
       });
     });
     it("should find the order killable", (done) => {
-      const makerRelay = new OpenRelay(web3, {
+      const makerRelay = new OpenRelay(web3.currentProvider, {
         _feeLookup: new MockFeeLookup(),
       });
       var takerAccount = new Promise((resolve, reject) => {
@@ -636,7 +636,7 @@ describe('OpenRelay', () => {
           resolve(accounts[1]);
         });
       });
-      const takerRelay = new OpenRelay(web3, {
+      const takerRelay = new OpenRelay(web3.currentProvider, {
         defaultAccount: takerAccount,
         _feeLookup: new MockFeeLookup(),
       });
@@ -685,7 +685,7 @@ describe('OpenRelay', () => {
       });
     });
     it("should find the order unfillable due to maker allowances", (done) => {
-      const makerRelay = new OpenRelay(web3, {
+      const makerRelay = new OpenRelay(web3.currentProvider, {
         _feeLookup: new MockFeeLookup(),
       });
       var takerAccount = new Promise((resolve, reject) => {
@@ -693,7 +693,7 @@ describe('OpenRelay', () => {
           resolve(accounts[1]);
         });
       });
-      const takerRelay = new OpenRelay(web3, {
+      const takerRelay = new OpenRelay(web3.currentProvider, {
         defaultAccount: takerAccount,
         _feeLookup: new MockFeeLookup(),
       });
@@ -738,7 +738,7 @@ describe('OpenRelay', () => {
       });
     });
     it("should find the order unfillable due to taker allowances", (done) => {
-      const makerRelay = new OpenRelay(web3, {
+      const makerRelay = new OpenRelay(web3.currentProvider, {
         _feeLookup: new MockFeeLookup(),
       });
       var takerAccount = new Promise((resolve, reject) => {
@@ -746,7 +746,7 @@ describe('OpenRelay', () => {
           resolve(accounts[1]);
         });
       });
-      const takerRelay = new OpenRelay(web3, {
+      const takerRelay = new OpenRelay(web3.currentProvider, {
         defaultAccount: takerAccount,
         _feeLookup: new MockFeeLookup(),
       });
@@ -793,7 +793,7 @@ describe('OpenRelay', () => {
   });
   describe('openrelay.submitOrder()', () => {
     it("should find the order fillable and transmit it", (done) => {
-      const openrelay = new OpenRelay(web3, {
+      const openrelay = new OpenRelay(web3.currentProvider, {
         _feeLookup: new MockFeeLookup(),
         _orderTransmitter: new MockTransmitOrder(),
       });
@@ -820,7 +820,7 @@ describe('OpenRelay', () => {
       });
     });
     it("should find the order invalid and fail", (done) => {
-      const openrelay = new OpenRelay(web3, {
+      const openrelay = new OpenRelay(web3.currentProvider, {
         _feeLookup: new MockFeeLookup(),
         _orderTransmitter: new MockTransmitOrder(),
       });
@@ -844,7 +844,7 @@ describe('OpenRelay', () => {
   });
   describe('openrelay.search()', () => {
     it('should return an item matching the parameters', (done) => {
-      const openrelay = new OpenRelay(web3, {
+      const openrelay = new OpenRelay(web3.currentProvider, {
         _feeLookup: new MockFeeLookup(),
       });
       var orderPromises = [];
@@ -877,7 +877,7 @@ describe('OpenRelay', () => {
   });
   describe('openrelay.cancelOrder()', () => {
     it("should cancel the order", (done) => {
-      const openrelay = new OpenRelay(web3, {
+      const openrelay = new OpenRelay(web3.currentProvider, {
         _feeLookup: new MockFeeLookup(),
       });
       var order = openrelay.createOrder(

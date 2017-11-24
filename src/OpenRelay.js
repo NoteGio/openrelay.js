@@ -3,6 +3,7 @@ import {MineablePromise} from './MineablePromise.js';
 import {FeeLookup} from './FeeLookup.js';
 import {OrderTransmitter} from './OrderTransmitter.js';
 import {OrderLookup} from './OrderLookup.js'
+import Web3 from "web3";
 import BigNumber from 'bignumber.js';
 import rp from 'request-promise-native';
 import * as bin from './BinaryOrder';
@@ -21,14 +22,15 @@ class OpenRelay {
    * @param {object} [options.zeroEx=new ZeroEx(web3.currentProvider)] - The ZeroEx object for interacting with the 0x exchange contract.
    * @param {number} [options.pollingIntervalMs=500] - The interval (in milliseconds) to be used for polling to see if a transaction has been mined.
    */
-  constructor(web3, options={}) {
-    this.web3 = web3;
+  constructor(web3Provider, options={}) {
+    this.web3 = new Web3();
+    this.web3.setProvider(web3Provider);
     this.relayBaseURL = (options.relayBaseURL || "https://api.openrelay.xyz").replace(/\/$/, "");
     if(options.defaultAccount) {
       this.defaultAccount = Promise.resolve(options.defaultAccount);
     } else {
       this.defaultAccount = new Promise((resolve, reject) => {
-        web3.eth.getAccounts((err, accounts) => {
+        this.web3.eth.getAccounts((err, accounts) => {
           if(err) {
             reject(err)
           } else {
