@@ -152,7 +152,8 @@ class OpenRelay {
    * @param {order} [order|Promise<order>] - The order to be validated. Must be signed.
    * @param {object} [options]
    * @param {string|BigNumber} [options.takerTokenAmount=order.takerTokenAmount] - The amount of the taker token to verify; other amounts will be verified proportionally.
-  *  @param {string} [options.takerAddress=openrelay.defaultAccount] - The taker to fill the order
+   * @param {string} [options.takerAddress=openrelay.defaultAccount] - The taker to fill the order
+   * @param {boolean} [options.fillOrKill=false] - fillOrKill will fill the order if possible, or take all remaining makerTokens at the order price if the order cannot be filled completely.
    * @returns {void}
    * @throws Will throw if order cannot be filled
    */
@@ -175,7 +176,11 @@ class OpenRelay {
       } else {
         takerTokenAmount = order.takerTokenAmount;
       }
-      return this.zeroEx.exchange.validateFillOrderThrowIfInvalidAsync(order, takerTokenAmount, takerAddress);
+      if(!options.fillorKill) {
+        return this.zeroEx.exchange.validateFillOrderThrowIfInvalidAsync(order, takerTokenAmount, takerAddress);
+      } else {
+        return this.zeroEx.exchange.validateFillOrKillOrderThrowIfInvalidAsync(order, takerTokenAmount, takerAddress);
+      }
     });
   }
 
@@ -324,6 +329,68 @@ class OpenRelay {
    */
    search(parameters) {
      return this.orderLookup.search(parameters);
+   }
+
+   /**
+   * cancelOrder
+   * Cancels the specified order.
+   * @param {order|Promise<order>} [order] - An order to be cancelled. The order does not need to be signed, but must be submitted by the maker of the order.
+   * @param {object} [options]
+   * @param {sring|BigNumber} [options.takerTokenAmount=order.takerTokenAmount] - Limit the amount of the order to be cancelled. Defaults to the full order, but allows cancelling part of an order.
+   * @returns {Promise<void>}
+   */
+   cancelOrder(order, options={}) {
+     return Promise.resolve(order).then((order) => {
+       var takerTokenAmount = new BigNumber(options.takerTokenAmount || order.takerTokenAmount);
+       return this.zeroEx.exchange.cancelOrderAsync(order, takerTokenAmount, {shouldValidate: true});
+     })
+   }
+   /**
+   * TODO: Ponder - I think we should promote the paradigm of using
+   *                fillOrdersUpTo whenver possible. If we make the default
+   *                behavior to pass a list instead of an order, that would
+   *                help enforce the pattern. If there's only one item in the
+   *                list we can still use fillOrder instead of fillOrdersUpTo
+   *                to save gas, but it would be a good API to ponder.
+   * fillOrders
+   * Cancels the specified order.
+   * @param {signedOrder[]|Promise<signedOrder[]>} [signedOrders] - A list of signed orders to be filled.
+   * @param {sring|BigNumber} [takerTokenAmount] - The amount to be filled
+   * @param {object} [options]
+   * @param {string} [options.takerAddress=openrelay.defaultAccount] - The taker to fill the order
+   * @param {string} [options.fillOrKill=true] - If only one order is specified
+   * @returns {Promise<void>}
+   */
+   fillOrders(signedOrders, takerTokenAmount, options={}) {
+     var fillOrKill = options.fillOrKill;
+     if(fillOrKill === undefined) {
+       fillOrKill = true;
+     }
+     return new MineablePromise(this, Promise.all([
+       Promise.resolve(signedOrders),
+       this.defaultAccount
+     ]).then((resolvedPromises) => {
+       var signedOrders = resolvedPromises[0];
+       takerTokenAmount = new BigNumber(takerTokenAmount);
+       var takerAddress = options.takerAddress || resolvedPromises[1];
+       if(signedOrders.length == 1) {
+         if(!fillOrKill) {
+           return Promise.all([
+              this.zeroEx.exchange.fillOrderAsync(signedOrders[0], takerTokenAmount, false, takerAddress, {shouldValidate: true})
+            ]);
+         }
+         return Promise.all([
+           this.zeroEx.exchange.fillOrKillOrderAsync(signedOrders[0], takerTokenAmount, takerAddress, {shouldValidate: true})
+         ]);
+       } else {
+         if(!fillOrKill) {
+           throw "options.fillOrKill can only be false if only one order is specified";
+         }
+         return Promise.all([
+           this.zeroEx.exchange.fillOrdersUpToAsync(signedOrders, takerTokenAmount, false, takerAddress, {shouldValidate: true})
+         ]);
+       }
+     }));
    }
 }
 

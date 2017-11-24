@@ -627,6 +627,63 @@ describe('OpenRelay', () => {
         });
       });
     });
+    it("should find the order killable", (done) => {
+      const makerRelay = new OpenRelay(web3, {
+        _feeLookup: new MockFeeLookup(),
+      });
+      var takerAccount = new Promise((resolve, reject) => {
+        web3.eth.getAccounts((err, accounts) => {
+          resolve(accounts[1]);
+        });
+      });
+      const takerRelay = new OpenRelay(web3, {
+        defaultAccount: takerAccount,
+        _feeLookup: new MockFeeLookup(),
+      });
+
+      Promise.all([
+        makerRelay.zeroEx.etherToken.getContractAddressAsync(),
+        makerRelay.zeroEx.exchange.getZRXTokenAddressAsync(),
+      ]).then((resolvedPromises) => {
+        var wethAddress = resolvedPromises[0];
+        var zrxAddress = resolvedPromises[1];
+        var signedOrder = makerRelay.signOrder(makerRelay.createOrder(
+            zrxAddress,
+            "100000000000000000",
+            wethAddress,
+            "58500000000000000",
+        ));
+        var makerAllowances = makerRelay.setMakerAllowances(signedOrder);
+        var takerAllowances = takerRelay.setTakerAllowances(signedOrder);
+        var makerAddress;
+        var takerAddress;
+        var sendEth = new MineablePromise(makerRelay, Promise.all([
+            makerRelay.defaultAccount,
+            takerRelay.defaultAccount,
+          ]).then((resolvedPromises) => {
+            makerAddress = resolvedPromises[0];
+            takerAddress = resolvedPromises[1];
+            return new Promise((resolve, reject) => {
+              web3.eth.sendTransaction({from: makerAddress, to: takerAddress, value: "58500000000000000"}, (err, data) => {
+                if(err) { reject(err) }
+                else { resolve([data]) }
+              });
+            });
+          }));
+        var depositEth = new MineablePromise(takerRelay, sendEth.mine().then(() => {
+            return Promise.all([takerRelay.zeroEx.etherToken.depositAsync(new BigNumber("58500000000000000"), takerAddress)])
+        }));
+        Promise.all([
+          makerAllowances.mine(),
+          takerAllowances.mine(),
+          depositEth.mine(),
+        ]).then(() => {
+          // Even though the taker doesn't have sufficient funds, killOrFill
+          // will use everything available.
+          takerRelay.validateFillOrder(signedOrder, {takerTokenAmount: new BigNumber("59000000000000000"), fillOrKill: true}).then(done);
+        });
+      });
+    });
     it("should find the order unfillable due to maker allowances", (done) => {
       const makerRelay = new OpenRelay(web3, {
         _feeLookup: new MockFeeLookup(),
@@ -818,5 +875,23 @@ describe('OpenRelay', () => {
       });
     });
   });
+  describe('openrelay.cancelOrder()', () => {
+    it("should cancel the order", (done) => {
+      const openrelay = new OpenRelay(web3, {
+        _feeLookup: new MockFeeLookup(),
+      });
+      var order = openrelay.createOrder(
+        "0x2956356cd2a2bf3202f771f50d3d14a367b48070",
+        "100000000000000000",
+        "0xc66ea802717bfb9833400264dd12c2bceaa34a6d",
+        "58500000000000000"
+      );
+      openrelay.cancelOrder(order).then(() => {
+        openrelay.validateOrderFillable(openrelay.signOrder(order)).then(expect.fail).catch(() => {
+          done();
+        });
+      });
+    });
+  })
 
 });
