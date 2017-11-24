@@ -1,0 +1,26 @@
+{
+  "name": "openrelay.js",
+  "version": "0.0.0",
+  "description": "A project template for authoring and publishing JavaScript libraries",
+  "homepage": "https://openrelay.xyz/",
+  "repository": "openrelay/openrelay.js",
+  "author": "Note G <openrelay@noteg.io> (https://noteg.io)",
+  "contributors": [
+    "Austin Roberts <austin.roberts@noteg.io>"
+  ],
+  "license": "LGPL",
+  "keywords": [
+    "ethereum",
+    "openrelay",
+    "0x"
+  ],
+  "main": "dist/index.js",
+  "jsnext:main": "dist/index.es.js",
+  "dependencies": {
+    "0x.js": "^0.22.3",
+    "babel-polyfill": "^6.26.0",
+    "babel-runtime": "^6.11.6",
+    "browserify": "^14.5.0",
+    "request-promise-native": "^1.0.5"
+  }
+}

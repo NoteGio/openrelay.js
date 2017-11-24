@@ -15,8 +15,8 @@
     "openrelay",
     "0x"
   ],
-  "main": "index.js",
-  "jsnext:main": "index.es.js",
+  "main": "dist/index.js",
+  "jsnext:main": "dist/index.es.js",
   "babel": {
     "presets": [
       "latest",
