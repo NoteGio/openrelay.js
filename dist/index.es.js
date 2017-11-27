@@ -7,6 +7,7 @@ import rp from 'request-promise-native';
 import BigNumber from 'bignumber.js';
 import util from 'ethereumjs-util';
 import _JSON$stringify from 'babel-runtime/core-js/json/stringify';
+import Web3 from 'web3';
 
 var MineablePromise = function () {
   function MineablePromise(openrelay, promises) {
@@ -279,18 +280,21 @@ var OpenRelay = function () {
    * @param {object} [options.zeroEx=new ZeroEx(web3.currentProvider)] - The ZeroEx object for interacting with the 0x exchange contract.
    * @param {number} [options.pollingIntervalMs=500] - The interval (in milliseconds) to be used for polling to see if a transaction has been mined.
    */
-  function OpenRelay(web3) {
+  function OpenRelay(web3Provider) {
+    var _this = this;
+
     var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
 
     _classCallCheck(this, OpenRelay);
 
-    this.web3 = web3;
+    this.web3 = new Web3();
+    this.web3.setProvider(web3Provider);
     this.relayBaseURL = (options.relayBaseURL || "https://api.openrelay.xyz").replace(/\/$/, "");
     if (options.defaultAccount) {
       this.defaultAccount = _Promise.resolve(options.defaultAccount);
     } else {
       this.defaultAccount = new _Promise(function (resolve, reject) {
-        web3.eth.getAccounts(function (err, accounts) {
+        _this.web3.eth.getAccounts(function (err, accounts) {
           if (err) {
             reject(err);
           } else {
@@ -370,11 +374,11 @@ var OpenRelay = function () {
   }, {
     key: 'signOrder',
     value: function signOrder(order) {
-      var _this = this;
+      var _this2 = this;
 
       return _Promise.resolve(order).then(function (order) {
-        return _this.getOrderHashHex(order).then(function (orderHash) {
-          return _this.zeroEx.signOrderHashAsync(orderHash, order.maker).then(function (signature) {
+        return _this2.getOrderHashHex(order).then(function (orderHash) {
+          return _this2.zeroEx.signOrderHashAsync(orderHash, order.maker).then(function (signature) {
             order.ecSignature = signature;
             return order;
           });
@@ -410,10 +414,10 @@ var OpenRelay = function () {
   }, {
     key: 'validateOrderFillable',
     value: function validateOrderFillable(order) {
-      var _this2 = this;
+      var _this3 = this;
 
       return _Promise.resolve(order).then(function (order) {
-        return _this2.zeroEx.exchange.validateOrderFillableOrThrowAsync(order);
+        return _this3.zeroEx.exchange.validateOrderFillableOrThrowAsync(order);
       });
     }
 
@@ -435,7 +439,7 @@ var OpenRelay = function () {
   }, {
     key: 'validateFillOrder',
     value: function validateFillOrder(order) {
-      var _this3 = this;
+      var _this4 = this;
 
       var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
 
@@ -455,9 +459,9 @@ var OpenRelay = function () {
           takerTokenAmount = order.takerTokenAmount;
         }
         if (!options.fillorKill) {
-          return _this3.zeroEx.exchange.validateFillOrderThrowIfInvalidAsync(order, takerTokenAmount, takerAddress);
+          return _this4.zeroEx.exchange.validateFillOrderThrowIfInvalidAsync(order, takerTokenAmount, takerAddress);
         } else {
-          return _this3.zeroEx.exchange.validateFillOrKillOrderThrowIfInvalidAsync(order, takerTokenAmount, takerAddress);
+          return _this4.zeroEx.exchange.validateFillOrKillOrderThrowIfInvalidAsync(order, takerTokenAmount, takerAddress);
         }
       });
     }
@@ -500,12 +504,12 @@ var OpenRelay = function () {
   }, {
     key: 'setMakerAllowances',
     value: function setMakerAllowances(order) {
-      var _this4 = this;
+      var _this5 = this;
 
       var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
 
       return new MineablePromise(this, _Promise.resolve(order).then(function (order) {
-        return _this4._setAllowances(order.makerTokenAddress, order.makerTokenAmount, order.makerFee, order.maker, options.unlimited === true, new BigNumber("1"));
+        return _this5._setAllowances(order.makerTokenAddress, order.makerTokenAmount, order.makerFee, order.maker, options.unlimited === true, new BigNumber("1"));
       }));
     }
 
@@ -523,7 +527,7 @@ var OpenRelay = function () {
   }, {
     key: 'setTakerAllowances',
     value: function setTakerAllowances(order) {
-      var _this5 = this;
+      var _this6 = this;
 
       var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
 
@@ -531,35 +535,35 @@ var OpenRelay = function () {
         var order = resolvedPromises[0];
         var defaultAccount = resolvedPromises[1];
         var fillAmount = options.takerFillAmount || order.takerTokenAmount;
-        return _this5._setAllowances(order.takerTokenAddress, fillAmount, order.takerFee.times(fillAmount).div(order.takerTokenAmount), options.account || defaultAccount, options.unlimited === true, new BigNumber("-1"));
+        return _this6._setAllowances(order.takerTokenAddress, fillAmount, order.takerFee.times(fillAmount).div(order.takerTokenAmount), options.account || defaultAccount, options.unlimited === true, new BigNumber("-1"));
       }));
     }
   }, {
     key: '_setAllowances',
     value: function _setAllowances(tokenAddress, tokenAmount, feeAmount, account, unlimited, direction) {
-      var _this6 = this;
+      var _this7 = this;
 
       return this.zeroEx.exchange.getZRXTokenAddressAsync().then(function (zrxAddress) {
-        return _Promise.all([_this6.zeroEx.token.getProxyAllowanceAsync(tokenAddress, account), _this6.zeroEx.token.getProxyAllowanceAsync(zrxAddress, account)]).then(function (resolvedPromises) {
+        return _Promise.all([_this7.zeroEx.token.getProxyAllowanceAsync(tokenAddress, account), _this7.zeroEx.token.getProxyAllowanceAsync(zrxAddress, account)]).then(function (resolvedPromises) {
           var tokenAllowance = resolvedPromises[0];
           var feeAllowance = resolvedPromises[1];
           var setAllowancePromises = [];
           if (unlimited === true) {
             if (tokenAllowance.lt(MAX_UINT_256.div(2))) {
-              setAllowancePromises.push(_this6.zeroEx.token.setUnlimitedProxyAllowanceAsync(tokenAddress, account));
+              setAllowancePromises.push(_this7.zeroEx.token.setUnlimitedProxyAllowanceAsync(tokenAddress, account));
             }
             if (tokenAddress != zrxAddress && feeAllowance.lt(MAX_UINT_256.div(2))) {
-              setAllowancePromises.push(_this6.zeroEx.token.setUnlimitedProxyAllowanceAsync(zrxAddress, account));
+              setAllowancePromises.push(_this7.zeroEx.token.setUnlimitedProxyAllowanceAsync(zrxAddress, account));
             }
           } else {
             if (tokenAddress == zrxAddress) {
               // If the token we're setting an allowance for *is* ZRX then
               //   direction is +1 for the maker, because the taker needs to be able to fill the order plus fees
               //   direction is -1 for the taker, because the taker will be able to use the completed order to pay fees
-              setAllowancePromises.push(_this6.zeroEx.token.setProxyAllowanceAsync(tokenAddress, account, tokenAllowance.plus(tokenAmount).plus(feeAmount.times(direction))));
+              setAllowancePromises.push(_this7.zeroEx.token.setProxyAllowanceAsync(tokenAddress, account, tokenAllowance.plus(tokenAmount).plus(feeAmount.times(direction))));
             } else {
-              setAllowancePromises.push(_this6.zeroEx.token.setProxyAllowanceAsync(tokenAddress, account, tokenAllowance.plus(tokenAmount)));
-              setAllowancePromises.push(_this6.zeroEx.token.setProxyAllowanceAsync(zrxAddress, account, feeAllowance.plus(feeAmount)));
+              setAllowancePromises.push(_this7.zeroEx.token.setProxyAllowanceAsync(tokenAddress, account, tokenAllowance.plus(tokenAmount)));
+              setAllowancePromises.push(_this7.zeroEx.token.setProxyAllowanceAsync(zrxAddress, account, feeAllowance.plus(feeAmount)));
             }
           }
           return _Promise.all(setAllowancePromises);
@@ -577,11 +581,11 @@ var OpenRelay = function () {
   }, {
     key: 'submitOrder',
     value: function submitOrder(signedOrder) {
-      var _this7 = this;
+      var _this8 = this;
 
       return _Promise.resolve(signedOrder).then(function (signedOrder) {
-        return _this7.validateOrderFillable(signedOrder).then(function () {
-          return _this7.orderTransmitter.submitOrder(signedOrder);
+        return _this8.validateOrderFillable(signedOrder).then(function () {
+          return _this8.orderTransmitter.submitOrder(signedOrder);
         });
       });
     }
@@ -618,13 +622,13 @@ var OpenRelay = function () {
   }, {
     key: 'cancelOrder',
     value: function cancelOrder(order) {
-      var _this8 = this;
+      var _this9 = this;
 
       var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
 
       return _Promise.resolve(order).then(function (order) {
         var takerTokenAmount = new BigNumber(options.takerTokenAmount || order.takerTokenAmount);
-        return _this8.zeroEx.exchange.cancelOrderAsync(order, takerTokenAmount, { shouldValidate: true });
+        return _this9.zeroEx.exchange.cancelOrderAsync(order, takerTokenAmount, { shouldValidate: true });
       });
     }
     /**
@@ -647,7 +651,7 @@ var OpenRelay = function () {
   }, {
     key: 'fillOrders',
     value: function fillOrders(signedOrders, takerTokenAmount) {
-      var _this9 = this;
+      var _this10 = this;
 
       var options = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
 
@@ -661,14 +665,14 @@ var OpenRelay = function () {
         var takerAddress = options.takerAddress || resolvedPromises[1];
         if (signedOrders.length == 1) {
           if (!fillOrKill) {
-            return _Promise.all([_this9.zeroEx.exchange.fillOrderAsync(signedOrders[0], takerTokenAmount, false, takerAddress, { shouldValidate: true })]);
+            return _Promise.all([_this10.zeroEx.exchange.fillOrderAsync(signedOrders[0], takerTokenAmount, false, takerAddress, { shouldValidate: true })]);
           }
-          return _Promise.all([_this9.zeroEx.exchange.fillOrKillOrderAsync(signedOrders[0], takerTokenAmount, takerAddress, { shouldValidate: true })]);
+          return _Promise.all([_this10.zeroEx.exchange.fillOrKillOrderAsync(signedOrders[0], takerTokenAmount, takerAddress, { shouldValidate: true })]);
         } else {
           if (!fillOrKill) {
             throw "options.fillOrKill can only be false if only one order is specified";
           }
-          return _Promise.all([_this9.zeroEx.exchange.fillOrdersUpToAsync(signedOrders, takerTokenAmount, false, takerAddress, { shouldValidate: true })]);
+          return _Promise.all([_this10.zeroEx.exchange.fillOrdersUpToAsync(signedOrders, takerTokenAmount, false, takerAddress, { shouldValidate: true })]);
         }
       }));
     }
