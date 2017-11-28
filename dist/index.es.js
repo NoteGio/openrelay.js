@@ -681,5 +681,76 @@ var OpenRelay = function () {
   return OpenRelay;
 }();
 
-export { OpenRelay, MineablePromise, FeeLookup, OrderLookup };
+var OrderFilter = function () {
+  function OrderFilter(orders) {
+    _classCallCheck(this, OrderFilter);
+
+    this.orders = orders;
+  }
+
+  _createClass(OrderFilter, [{
+    key: "search",
+    value: function search(parameters) {
+      var results = [];
+      var _iteratorNormalCompletion = true;
+      var _didIteratorError = false;
+      var _iteratorError = undefined;
+
+      try {
+        for (var _iterator = _getIterator(this.orders), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+          var order = _step.value;
+
+          console.log(_JSON$stringify(order));
+          var match = true;
+          for (var key in parameters) {
+            console.log(key);
+            if (key == "trader") {
+              if (!(order["maker"] == parameters[key] || order["taker"] == parameters[key])) {
+                console.log(key);
+                console.log(order.maker, parameters[key]);
+                console.log(order.taker, parameters[key]);
+                match = false;
+              }
+            } else if (key == "tokenAddress") {
+              if (!(order["makerTokenAddress"] == parameters[key] || order["takerTokenAddress"] == parameters[key])) {
+                console.log(key);
+                console.log(order.makerTokenAddress, parameters[key]);
+                console.log(order.takerTokenAddress, parameters[key]);
+                match = false;
+              }
+            } else {
+              if (order[key] != parameters[key]) {
+                console.log(key);
+                console.log(order[key], parameters[key]);
+                match = false;
+              }
+            }
+          }
+          if (match) {
+            results.push(order);
+          }
+        }
+      } catch (err) {
+        _didIteratorError = true;
+        _iteratorError = err;
+      } finally {
+        try {
+          if (!_iteratorNormalCompletion && _iterator.return) {
+            _iterator.return();
+          }
+        } finally {
+          if (_didIteratorError) {
+            throw _iteratorError;
+          }
+        }
+      }
+
+      return _Promise.resolve(results);
+    }
+  }]);
+
+  return OrderFilter;
+}();
+
+export { OpenRelay, MineablePromise, FeeLookup, OrderLookup, OrderFilter };
 //# sourceMappingURL=index.es.js.map
