@@ -75,6 +75,7 @@ describe('OpenRelay', () => {
       const openrelay = new OpenRelay(web3.currentProvider, {
         _feeLookup: new MockFeeLookup(),
       });
+      console.log("A");
       openrelay.createOrder(
         "0x2956356cd2a2bf3202f771f50d3d14a367b48070",
         "100000000000000000",
@@ -82,9 +83,11 @@ describe('OpenRelay', () => {
         "58500000000000000",
         {expirationUnixTimestampSec: "0"}
       ).then((order) => {
+        console.log("B");
         // We have to set a constant salt to ensure the hash is consistent
         order.salt = "42452002646230337759284911949218740433666254174089747348021014982854768673562";
         openrelay.getOrderHashHex(order).then((hash) => {
+          console.log("C");
           expect(hash).to.equal("0x6d3991e0b683deeb66790d25c0bce4e8e8082eef053900d929dc23012df58054");
           done();
         });
@@ -239,10 +242,12 @@ describe('OpenRelay', () => {
       const openrelay = new OpenRelay(web3.currentProvider, {
         _feeLookup: new MockFeeLookup(),
       });
-      var addressPromise = Promise.all([
-        openrelay.zeroEx.etherToken.getContractAddressAsync(),
-        openrelay.zeroEx.exchange.getZRXTokenAddressAsync()
-      ]);
+      var addressPromise = openrelay.ready.then(() => {
+        return Promise.all([
+          Promise.resolve(openrelay.zeroEx.etherToken.getContractAddress()),
+          Promise.resolve(openrelay.zeroEx.exchange.getZRXTokenAddress())
+        ]);
+      });
       var zrxAddress;
       addressPromise.then((resolvedPromises) => {
         var wethAddress = resolvedPromises[0];
@@ -277,10 +282,12 @@ describe('OpenRelay', () => {
       const openrelay = new OpenRelay(web3.currentProvider, {
         _feeLookup: new MockFeeLookup(),
       });
-      var addressPromise = Promise.all([
-        openrelay.zeroEx.etherToken.getContractAddressAsync(),
-        openrelay.zeroEx.exchange.getZRXTokenAddressAsync()
-      ]);
+      var addressPromise = openrelay.ready.then(() => {
+        return Promise.all([
+          Promise.resolve(openrelay.zeroEx.etherToken.getContractAddress()),
+          Promise.resolve(openrelay.zeroEx.exchange.getZRXTokenAddress())
+        ]);
+      })
       var zrxAddress;
       addressPromise.then((resolvedPromises) => {
         var wethAddress = resolvedPromises[0];
@@ -315,10 +322,12 @@ describe('OpenRelay', () => {
       const openrelay = new OpenRelay(web3.currentProvider, {
         _feeLookup: new MockFeeLookup(),
       });
-      var addressPromise = Promise.all([
-        openrelay.zeroEx.etherToken.getContractAddressAsync(),
-        openrelay.zeroEx.exchange.getZRXTokenAddressAsync()
-      ]);
+      var addressPromise = openrelay.ready.then(() => {
+        return Promise.all([
+          Promise.resolve(openrelay.zeroEx.etherToken.getContractAddress()),
+          Promise.resolve(openrelay.zeroEx.exchange.getZRXTokenAddress())
+        ]);
+      })
       var zrxAddress;
       addressPromise.then((resolvedPromises) => {
         var wethAddress = resolvedPromises[0];
@@ -356,11 +365,13 @@ describe('OpenRelay', () => {
       const openrelay = new OpenRelay(web3.currentProvider, {
         _feeLookup: new MockFeeLookup(),
       });
-      var addressPromise = Promise.all([
-        openrelay.zeroEx.etherToken.getContractAddressAsync(),
-        openrelay.zeroEx.exchange.getZRXTokenAddressAsync(),
-        openrelay.defaultAccount
-      ]);
+      var addressPromise = openrelay.ready.then(() => {
+        return Promise.all([
+          Promise.resolve(openrelay.zeroEx.etherToken.getContractAddress()),
+          Promise.resolve(openrelay.zeroEx.exchange.getZRXTokenAddress()),
+          openrelay.defaultAccount
+        ]);
+      })
       var zrxAddress;
       var defaultAccount;
       addressPromise.then((resolvedPromises) => {
@@ -400,11 +411,13 @@ describe('OpenRelay', () => {
       const openrelay = new OpenRelay(web3.currentProvider, {
         _feeLookup: new MockFeeLookup(),
       });
-      var addressPromise = Promise.all([
-        openrelay.zeroEx.etherToken.getContractAddressAsync(),
-        openrelay.zeroEx.exchange.getZRXTokenAddressAsync(),
-        openrelay.defaultAccount
-      ]);
+      var addressPromise = openrelay.ready.then(() => {
+        return Promise.all([
+          Promise.resolve(openrelay.zeroEx.etherToken.getContractAddress()),
+          Promise.resolve(openrelay.zeroEx.exchange.getZRXTokenAddress()),
+          openrelay.defaultAccount
+        ]);
+      })
       var zrxAddress;
       var defaultAccount;
       addressPromise.then((resolvedPromises) => {
@@ -441,11 +454,13 @@ describe('OpenRelay', () => {
       const openrelay = new OpenRelay(web3.currentProvider, {
         _feeLookup: new MockFeeLookup(),
       });
-      var addressPromise = Promise.all([
-        openrelay.zeroEx.etherToken.getContractAddressAsync(),
-        openrelay.zeroEx.exchange.getZRXTokenAddressAsync(),
-        openrelay.defaultAccount
-      ]);
+      var addressPromise = openrelay.ready.then(() => {
+        return Promise.all([
+          Promise.resolve(openrelay.zeroEx.etherToken.getContractAddress()),
+          Promise.resolve(openrelay.zeroEx.exchange.getZRXTokenAddress()),
+          openrelay.defaultAccount
+        ]);
+      })
       var zrxAddress;
       var defaultAccount;
       addressPromise.then((resolvedPromises) => {
@@ -483,11 +498,13 @@ describe('OpenRelay', () => {
       const openrelay = new OpenRelay(web3.currentProvider, {
         _feeLookup: new MockFeeLookup(),
       });
-      var addressPromise = Promise.all([
-        openrelay.zeroEx.etherToken.getContractAddressAsync(),
-        openrelay.zeroEx.exchange.getZRXTokenAddressAsync(),
-        openrelay.defaultAccount
-      ]);
+      var addressPromise = openrelay.ready.then(() => {
+        return Promise.all([
+          Promise.resolve(openrelay.zeroEx.etherToken.getContractAddress()),
+          Promise.resolve(openrelay.zeroEx.exchange.getZRXTokenAddress()),
+          openrelay.defaultAccount
+        ]);
+      })
       var zrxAddress;
       var defaultAccount;
       addressPromise.then((resolvedPromises) => {
@@ -529,10 +546,12 @@ describe('OpenRelay', () => {
       const openrelay = new OpenRelay(web3.currentProvider, {
         _feeLookup: new MockFeeLookup(),
       });
-      Promise.all([
-        openrelay.zeroEx.etherToken.getContractAddressAsync(),
-        openrelay.zeroEx.exchange.getZRXTokenAddressAsync(),
-      ]).then((resolvedPromises) => {
+      openrelay.ready.then(() => {
+        return Promise.all([
+          Promise.resolve(openrelay.zeroEx.etherToken.getContractAddress()),
+          Promise.resolve(openrelay.zeroEx.exchange.getZRXTokenAddress()),
+        ]);
+      }).then((resolvedPromises) => {
         var wethAddress = resolvedPromises[0];
         var zrxAddress = resolvedPromises[1];
         var order = openrelay.createOrder(
@@ -552,10 +571,12 @@ describe('OpenRelay', () => {
       const openrelay = new OpenRelay(web3.currentProvider, {
         _feeLookup: new MockFeeLookup(),
       });
-      Promise.all([
-        openrelay.zeroEx.etherToken.getContractAddressAsync(),
-        openrelay.zeroEx.exchange.getZRXTokenAddressAsync(),
-      ]).then((resolvedPromises) => {
+      openrelay.ready.then(() => {
+        return Promise.all([
+          Promise.resolve(openrelay.zeroEx.etherToken.getContractAddress()),
+          Promise.resolve(openrelay.zeroEx.exchange.getZRXTokenAddress()),
+        ]);
+      }).then((resolvedPromises) => {
         var wethAddress = resolvedPromises[0];
         var zrxAddress = resolvedPromises[1];
         openrelay.validateOrderFillable(openrelay.signOrder(
@@ -586,10 +607,12 @@ describe('OpenRelay', () => {
         _feeLookup: new MockFeeLookup(),
       });
 
-      Promise.all([
-        makerRelay.zeroEx.etherToken.getContractAddressAsync(),
-        makerRelay.zeroEx.exchange.getZRXTokenAddressAsync(),
-      ]).then((resolvedPromises) => {
+      makerRelay.ready.then(() => {
+        return Promise.all([
+          Promise.resolve(makerRelay.zeroEx.etherToken.getContractAddress()),
+          Promise.resolve(makerRelay.zeroEx.exchange.getZRXTokenAddress()),
+        ]);
+      }).then((resolvedPromises) => {
         var wethAddress = resolvedPromises[0];
         var zrxAddress = resolvedPromises[1];
         var signedOrder = makerRelay.signOrder(makerRelay.createOrder(
@@ -641,10 +664,12 @@ describe('OpenRelay', () => {
         _feeLookup: new MockFeeLookup(),
       });
 
-      Promise.all([
-        makerRelay.zeroEx.etherToken.getContractAddressAsync(),
-        makerRelay.zeroEx.exchange.getZRXTokenAddressAsync(),
-      ]).then((resolvedPromises) => {
+      makerRelay.ready.then(() => {
+        return Promise.all([
+          Promise.resolve(makerRelay.zeroEx.etherToken.getContractAddress()),
+          Promise.resolve(makerRelay.zeroEx.exchange.getZRXTokenAddress()),
+        ]);
+      }).then((resolvedPromises) => {
         var wethAddress = resolvedPromises[0];
         var zrxAddress = resolvedPromises[1];
         var signedOrder = makerRelay.signOrder(makerRelay.createOrder(
@@ -698,10 +723,12 @@ describe('OpenRelay', () => {
         _feeLookup: new MockFeeLookup(),
       });
 
-      Promise.all([
-        makerRelay.zeroEx.etherToken.getContractAddressAsync(),
-        makerRelay.zeroEx.exchange.getZRXTokenAddressAsync(),
-      ]).then((resolvedPromises) => {
+      makerRelay.ready.then(() => {
+        return Promise.all([
+          Promise.resolve(makerRelay.zeroEx.etherToken.getContractAddress()),
+          Promise.resolve(makerRelay.zeroEx.exchange.getZRXTokenAddress()),
+        ]);
+      }).then((resolvedPromises) => {
         var wethAddress = resolvedPromises[0];
         var zrxAddress = resolvedPromises[1];
         var signedOrder = makerRelay.signOrder(makerRelay.createOrder(
@@ -751,10 +778,12 @@ describe('OpenRelay', () => {
         _feeLookup: new MockFeeLookup(),
       });
 
-      Promise.all([
-        makerRelay.zeroEx.etherToken.getContractAddressAsync(),
-        makerRelay.zeroEx.exchange.getZRXTokenAddressAsync(),
-      ]).then((resolvedPromises) => {
+      makerRelay.ready.then(() => {
+        return Promise.all([
+          Promise.resolve(makerRelay.zeroEx.etherToken.getContractAddress()),
+          Promise.resolve(makerRelay.zeroEx.exchange.getZRXTokenAddress()),
+        ]);
+      }).then((resolvedPromises) => {
         var wethAddress = resolvedPromises[0];
         var zrxAddress = resolvedPromises[1];
         var signedOrder = makerRelay.signOrder(makerRelay.createOrder(
@@ -797,10 +826,12 @@ describe('OpenRelay', () => {
         _feeLookup: new MockFeeLookup(),
         _orderTransmitter: new MockTransmitOrder(),
       });
-      Promise.all([
-        openrelay.zeroEx.etherToken.getContractAddressAsync(),
-        openrelay.zeroEx.exchange.getZRXTokenAddressAsync(),
-      ]).then((resolvedPromises) => {
+      openrelay.ready.then(() => {
+        return Promise.all([
+          Promise.resolve(openrelay.zeroEx.etherToken.getContractAddress()),
+          Promise.resolve(openrelay.zeroEx.exchange.getZRXTokenAddress()),
+        ]);
+      }).then((resolvedPromises) => {
         var wethAddress = resolvedPromises[0];
         var zrxAddress = resolvedPromises[1];
         var order = openrelay.createOrder(
@@ -824,10 +855,12 @@ describe('OpenRelay', () => {
         _feeLookup: new MockFeeLookup(),
         _orderTransmitter: new MockTransmitOrder(),
       });
-      Promise.all([
-        openrelay.zeroEx.etherToken.getContractAddressAsync(),
-        openrelay.zeroEx.exchange.getZRXTokenAddressAsync(),
-      ]).then((resolvedPromises) => {
+      openrelay.ready.then(() => {
+        return Promise.all([
+          Promise.resolve(openrelay.zeroEx.etherToken.getContractAddress()),
+          Promise.resolve(openrelay.zeroEx.exchange.getZRXTokenAddress()),
+        ]);
+      }).then((resolvedPromises) => {
         var wethAddress = resolvedPromises[0];
         var zrxAddress = resolvedPromises[1];
         var order = openrelay.createOrder(

@@ -31,7 +31,7 @@
     "extends": "airbnb-base"
   },
   "dependencies": {
-    "0x.js": "^0.22.3",
+    "0x.js": "^0.27.2",
     "babel-polyfill": "^6.26.0",
     "babel-runtime": "^6.11.6",
     "browserify": "^14.5.0",

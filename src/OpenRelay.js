@@ -41,13 +41,22 @@ class OpenRelay {
     }
     this.defaultFeeRecipient = options.defaultFeeRecipient || "0xc22d5b2951db72b44cfb8089bb8cd374a3c354ea";
     this.useBin = options.useBin || true;
-    this.zeroEx = options.zeroEx || new ZeroEx(this.web3.currentProvider);
     this.pollingIntervalMs = options.pollingIntervalMs || 500;
-    this.exchangeContractAddress = this.zeroEx.exchange.getContractAddressAsync();
     this.apiVersion = "v0.0";
     this.feeLookup = options._feeLookup || new FeeLookup(this.relayBaseURL, this.apiVersion);
     this.orderTransmitter = options._orderTransmitter || new OrderTransmitter(this.relayBaseURL, this.apiVersion, this.useBin);
     this.orderLookup = options._orderLookup || new OrderLookup(this.relayBaseURL, this.apiVersion, this.useBin);
+    this.ready = new Promise((resolve, reject) => {
+      this.web3.version.getNetwork((err, netId) => {
+        if(err) {
+          reject(err);
+        } else {
+          this.zeroEx = options.zeroEx || new ZeroEx(this.web3.currentProvider, {networkId: parseInt(netId)});
+          this.exchangeContractAddress = Promise.resolve(this.zeroEx.exchange.getContractAddress());
+          resolve();
+        }
+      });
+    });
   }
 
   /**
@@ -64,41 +73,43 @@ class OpenRelay {
    * @returns {Promise<order>} - A promise for an unsigned order.
    */
   createOrder(makerTokenAddress, makerTokenAmount, takerTokenAddress, takerTokenAmount, options={}) {
-    if (options.expirationUnixTimestampSec && options.duration) {
-      throw "Only specify one of expirationUnixTimestampSec and duration"
-    }
-    options.expirationUnixTimestampSec || parseInt(new Date().getTime() / 1000);
-    var order = {
-      makerTokenAddress: makerTokenAddress,
-      makerTokenAmount: new BigNumber(makerTokenAmount),
-      takerTokenAddress: takerTokenAddress,
-      takerTokenAmount: new BigNumber(takerTokenAmount),
-      expirationUnixTimestampSec: new BigNumber(
-        options.expirationUnixTimestampSec ||
-        (parseInt(new Date().getTime() / 1000) + parseInt(options.duration || 24 * 60 * 60 * 1))
-      ),
-      salt: this.generateWatermarkedSalt(),
-      feeRecipient: options.feeRecipient || this.defaultFeeRecipient,
-    };
-    return Promise.all([
-      this.defaultAccount,
-      this.exchangeContractAddress,
-      this.feeLookup.getFee(order)
-    ]).then((resolvedPromises) => {
-      order.maker = options.maker || resolvedPromises[0];
-      order.exchangeContractAddress = resolvedPromises[1];
-      var feeResponse = resolvedPromises[2];
-      order.taker = feeResponse.takerToSpecify || "0x0000000000000000000000000000000000000000";
-      order.feeRecipient = feeResponse.feeRecipient;
-      if(options.makerFeePortion) {
-        var totalFee = new BigNumber(feeResponse.makerFee).plus(feeResponse.takerFee);
-        order.makerFee = totalFee.times(options.makerFeePortion);
-        order.takerFee = totalFee.minus(order.makerFee);
-      } else {
-        order.makerFee = new BigNumber(feeResponse.makerFee);
-        order.takerFee = new BigNumber(feeResponse.takerFee);
+    return this.ready.then(() => {
+      if (options.expirationUnixTimestampSec && options.duration) {
+        throw "Only specify one of expirationUnixTimestampSec and duration"
       }
-      return order;
+      options.expirationUnixTimestampSec || parseInt(new Date().getTime() / 1000);
+      var order = {
+        makerTokenAddress: makerTokenAddress,
+        makerTokenAmount: new BigNumber(makerTokenAmount),
+        takerTokenAddress: takerTokenAddress,
+        takerTokenAmount: new BigNumber(takerTokenAmount),
+        expirationUnixTimestampSec: new BigNumber(
+          options.expirationUnixTimestampSec ||
+          (parseInt(new Date().getTime() / 1000) + parseInt(options.duration || 24 * 60 * 60 * 1))
+        ),
+        salt: this.generateWatermarkedSalt(),
+        feeRecipient: options.feeRecipient || this.defaultFeeRecipient,
+      };
+      return Promise.all([
+        this.defaultAccount,
+        this.exchangeContractAddress,
+        this.feeLookup.getFee(order)
+      ]).then((resolvedPromises) => {
+        order.maker = options.maker || resolvedPromises[0];
+        order.exchangeContractAddress = resolvedPromises[1];
+        var feeResponse = resolvedPromises[2];
+        order.taker = feeResponse.takerToSpecify || "0x0000000000000000000000000000000000000000";
+        order.feeRecipient = feeResponse.feeRecipient;
+        if(options.makerFeePortion) {
+          var totalFee = new BigNumber(feeResponse.makerFee).plus(feeResponse.takerFee);
+          order.makerFee = totalFee.times(options.makerFeePortion);
+          order.takerFee = totalFee.minus(order.makerFee);
+        } else {
+          order.makerFee = new BigNumber(feeResponse.makerFee);
+          order.takerFee = new BigNumber(feeResponse.takerFee);
+        }
+        return order;
+      });
     });
   }
 
@@ -108,7 +119,9 @@ class OpenRelay {
    * @returns {Promise<signedOrder>} - A signed order.
    */
   signOrder(order) {
-    return Promise.resolve(order).then((order) => {
+    return this.ready.then(() => {
+      return order
+    }).then((order) => {
       return this.getOrderHashHex(order).then((orderHash) => {
         return this.zeroEx.signOrderHashAsync(orderHash, order.maker).then((signature) => {
           order.ecSignature = signature;
@@ -124,7 +137,7 @@ class OpenRelay {
    * @returns {Promise<string>}
    */
   getOrderHashHex(order) {
-    return Promise.resolve(order).then((order) => {
+    return this.ready.then(() => {return order}).then((order) => {
       return ZeroEx.getOrderHashHex(order);
     });
   }
@@ -140,7 +153,7 @@ class OpenRelay {
    * @throws Will throw if order cannot be filled
    */
   validateOrderFillable(order) {
-    return Promise.resolve(order).then((order) => {
+    return this.ready.then(() => {return order}).then((order) => {
       return this.zeroEx.exchange.validateOrderFillableOrThrowAsync(order);
     });
   }
@@ -161,7 +174,7 @@ class OpenRelay {
    */
   validateFillOrder(order, options={}) {
     return Promise.all([
-      Promise.resolve(order),
+      this.ready.then(() => {return order}),
       this.defaultAccount,
     ]).then((resolvedPromises) => {
       var order = resolvedPromises[0];
@@ -218,7 +231,7 @@ class OpenRelay {
    * @return {void}
    */
   setMakerAllowances(order, options={}) {
-    return new MineablePromise(this, Promise.resolve(order).then((order) => {
+    return new MineablePromise(this, this.ready.then(() => {return order}).then((order) => {
       return this._setAllowances(
         order.makerTokenAddress,
         order.makerTokenAmount,
@@ -242,7 +255,7 @@ class OpenRelay {
    */
   setTakerAllowances(order, options={}) {
     return new MineablePromise(this, Promise.all([
-      Promise.resolve(order),
+      this.ready.then(() => {return order}),
       this.defaultAccount
     ]).then((resolvedPromises) => {
       var order = resolvedPromises[0];
@@ -260,8 +273,9 @@ class OpenRelay {
   }
 
   _setAllowances(tokenAddress, tokenAmount, feeAmount, account, unlimited, direction) {
-    return this.zeroEx.exchange.getZRXTokenAddressAsync()
-    .then((zrxAddress) => {
+    return this.ready.then(() => {
+      return this.zeroEx.exchange.getZRXTokenAddress()
+    }).then((zrxAddress) => {
       return Promise.all([
         this.zeroEx.token.getProxyAllowanceAsync(tokenAddress, account),
         this.zeroEx.token.getProxyAllowanceAsync(zrxAddress, account)
@@ -309,7 +323,7 @@ class OpenRelay {
   * @returns {Promise<void>}
   */
   submitOrder(signedOrder) {
-    return Promise.resolve(signedOrder).then((signedOrder) => {
+    return this.ready.then(() => {return signedOrder}).then((signedOrder) => {
       return this.validateOrderFillable(signedOrder).then(() => {
         return this.orderTransmitter.submitOrder(signedOrder);
       });
@@ -330,7 +344,9 @@ class OpenRelay {
    * @param {string} [parameters.feeRecipient] - Match orders with the specified feeRecipient
    */
    search(parameters) {
-     return this.orderLookup.search(parameters);
+     return this.ready.then(() => {
+       return this.orderLookup.search(parameters);
+     })
    }
 
    /**
@@ -342,7 +358,7 @@ class OpenRelay {
    * @returns {Promise<void>}
    */
    cancelOrder(order, options={}) {
-     return Promise.resolve(order).then((order) => {
+     return this.ready.then(() => {return order}).then((order) => {
        var takerTokenAmount = new BigNumber(options.takerTokenAmount || order.takerTokenAmount);
        return this.zeroEx.exchange.cancelOrderAsync(order, takerTokenAmount, {shouldValidate: true});
      })
@@ -369,7 +385,7 @@ class OpenRelay {
        fillOrKill = true;
      }
      return new MineablePromise(this, Promise.all([
-       Promise.resolve(signedOrders),
+       this.ready.then(() => {return signedOrders}),
        this.defaultAccount
      ]).then((resolvedPromises) => {
        var signedOrders = resolvedPromises[0];
