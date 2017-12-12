@@ -566,7 +566,7 @@ describe('OpenRelay', () => {
           )).then(done).catch(expect.fail);
         })
       });
-    });
+    }).timeout(3000);
     it("should fail due to insufficient maker funds / allowances", (done) => {
       const openrelay = new OpenRelay(web3.currentProvider, {
         _feeLookup: new MockFeeLookup(),
@@ -708,7 +708,7 @@ describe('OpenRelay', () => {
           takerRelay.validateFillOrder(signedOrder, {takerTokenAmount: new BigNumber("59000000000000000"), fillOrKill: true}).then(done);
         });
       });
-    });
+    }).timeout(3000);
     it("should find the order unfillable due to maker allowances", (done) => {
       const makerRelay = new OpenRelay(web3.currentProvider, {
         _feeLookup: new MockFeeLookup(),
