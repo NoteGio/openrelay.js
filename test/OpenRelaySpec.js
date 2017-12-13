@@ -41,6 +41,7 @@ function getTestRPC() {
     db_path: path.join(__dirname, '.chaindb'),
     mnemonic: "concert load couple harbor equip island argue ramp clarify fence smart topic",
     logger: console,
+    gasLimit: 300000,
   });
 }
 

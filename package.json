@@ -52,7 +52,7 @@
     "eslint": "^3.8.0",
     "eslint-config-airbnb-base": "^10.0.1",
     "eslint-plugin-import": "^2.8.0",
-    "ethereumjs-testrpc": "^4.1.3",
+    "ethereumjs-testrpc": "^6.0.3",
     "istanbul": "^1.1.0-alpha.1",
     "mocha": "^3.1.2",
     "rollup": "^0.36.4",
@@ -70,6 +70,7 @@
     "build:browser": "node tools/build ; browserify -s OpenRelay dist/index.umd.js -o dist/index.browser.js",
     "prepublish": "npm run build",
     "publish:docs": "easystatic deploy docs --repo kriasoft/babel-starter-kit",
-    "start": "easystatic start docs"
+    "start": "easystatic start docs",
+    "update-testrpc-snapshot": "wget wget https://s3.amazonaws.com/testrpc-shapshots/${CONTRACTS_COMMIT_HASH}.zip ; unzip ${CONTRACTS_COMMIT_HASH}.zip -d testrpc_snapshot ; tar -czf test/0x-testrpc-snapshot.tar.gz -C testrpc_snapshot . "
   }
 }
