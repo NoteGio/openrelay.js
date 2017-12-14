@@ -35,7 +35,8 @@
     "babel-polyfill": "^6.26.0",
     "babel-runtime": "^6.11.6",
     "browserify": "^14.5.0",
-    "request-promise-native": "^1.0.5"
+    "request-promise-native": "^1.0.5",
+    "web3": "^0.20.2"
   },
   "devDependencies": {
     "babel-cli": "^6.16.0",
@@ -57,8 +58,7 @@
     "mocha": "^3.1.2",
     "rollup": "^0.36.4",
     "rollup-plugin-babel": "^2.6.1",
-    "sinon": "^2.0.0-pre.3",
-    "web3": "^0.20.2"
+    "sinon": "^2.0.0-pre.3"
   },
   "scripts": {
     "lint": "eslint src test tools",
